@@ -416,3 +416,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+schoolAPI/appsettings.json
+schoolAPI/appsettings.Development.json
+schoolAPI/Properties/launchSettings.json
+schoolAPI/ProfessorAPI.sln
