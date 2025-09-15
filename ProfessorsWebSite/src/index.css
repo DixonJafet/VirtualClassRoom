@@ -1,0 +1,47 @@
+:root{
+  /*font-family:Helvetica, sans-serif;*/
+  --primary: #3B82F6;
+  --primary-light: #60A5FA;
+  --secondary: #10B981;
+  --secondary-light: #34D399;
+  --dark: #111827;
+  --darker: #070d17;
+  --light: #E5E7EB;
+  --blue: #3B82F6;
+  --green: #10B981;
+  --yellow: #e2981a;
+  --red: #EF4444;
+  --gray: #6B7280;
+  --border: 7px;
+  /*--darker: #2c2c2c9d;*/
+  font-family: Montserrat, sans;
+  font-size: 0.8rem;
+  font-weight: bold;
+  letter-spacing: 0.12rem;
+  /*background-color:rgb(93, 174, 193);
+    background: linear-gradient(140deg, 
+  #71e37c 5%,#c6c6c6 40%,
+  #3ea1ed 55%
+*//*
+background: linear-gradient(140deg, 
+#81C784 5%,#ffffff 40%,
+#64B5F6 55%
+);*/
+background: linear-gradient(135deg, var(--blue) 0%, var(--green) 50%);
+}
+input,button,select{
+  letter-spacing: 0.07rem;
+}
+#root {
+
+
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+ul {
+  list-style: none;
+}

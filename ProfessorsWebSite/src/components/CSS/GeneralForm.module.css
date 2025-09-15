@@ -1,0 +1,123 @@
+.form-container {
+    overflow: auto;
+    max-height: 620px;
+    min-width: 300px;
+    padding: 2rem;
+    background: linear-gradient(135deg, #3b83f62e,#10b9813a ); 
+    backdrop-filter: blur(10px);
+    border-radius: var(--border);
+    padding-bottom: 50px;
+   /* border: 2px solid #ff0000;*/
+    box-shadow: 0 4px 12px var(--primary);
+}
+
+
+
+
+
+.form-container button {
+  background-color: var(--darker);
+
+
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem 3rem;
+    margin-bottom: 1.5rem;
+}
+  
+.form-group {
+
+    display: flex;
+    flex-direction: column;
+    background: var(--dark);
+    border-radius: var(--border);
+    color: var(--green);
+    padding: 1rem 0.7rem;
+    transition: all 0.3s ease-in-out;
+
+}
+
+.form-group:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+  
+.form-group label {
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    border-radius: var(--border);
+    text-align: center;
+}
+  
+.form-group input {
+    padding: 0.75rem;
+    border: 2px solid rgba(255, 255, 255, 0.75);
+    border-radius: var(--border);
+    font-size: 1.15rem;
+    font-weight: bold;
+    transition: all 0.3s ease-in-out;
+    background-color: var(--dark);
+    color: white;
+}
+  
+.form-group input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+.form-group input[type="date"]::-webkit-inner-spin-button {
+    display: none;
+}
+  
+.form-group input:focus {
+    outline: none;
+    border-color: white;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+    background-color: var(--dark);
+
+}
+button{
+    font-size: 1.25rem;
+
+}
+.submit-button {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--darker);
+    color: var(--blue);
+    border: none;
+    border-radius: var(--border);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+    
+.submit-button:hover {
+    background:  var(--blue);
+    color:var(--dark);
+    box-shadow: 0 4px 8px var(--dark);
+}
+  
+
+
+@media (max-width: 700px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    
+    
+    .form-container {
+      margin: 0rem;
+      padding: 1rem;
+      overflow-y: scroll;
+        max-height: 100vh;
+
+    }
+
+}

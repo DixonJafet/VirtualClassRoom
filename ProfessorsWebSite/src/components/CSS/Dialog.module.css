@@ -1,0 +1,50 @@
+.dialog {
+    padding: 2rem;
+    border: none;
+    border-radius: var(--border);
+    background-color: var(--dark);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.button-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.accept-button, .cancel-button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: var(--border);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.accept-button {
+    background-color: #81C784;
+    color: var(--dark);
+}
+
+.accept-button:hover {
+    background-color: #64B5F6;
+    transform: translateY(-2px);
+}
+
+.cancel-button {
+    background-color: transparent;
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.cancel-button:hover {
+    border-color:var(--red);
+    color:var(--red);
+    transform: translateY(-1px);
+} 

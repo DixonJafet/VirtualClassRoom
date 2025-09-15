@@ -1,0 +1,45 @@
+
+
+.floating-frame{
+
+    position: fixed;
+    inset: 0;
+    opacity:1;
+    z-index: 919;
+    display: flex;
+    justify-content: center;
+
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.4);
+    overflow-y: auto;
+}
+
+@media (max-width: 760px) {
+    .floating-frame{
+        align-items: stretch;
+
+        
+    }
+}
+
+.button-close{
+    position: relative;
+    top: 1rem;
+    line-height:2rem;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 50%;
+    background-color:  var(--darker);
+    color: var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 920;
+}
+
+
+
+
+

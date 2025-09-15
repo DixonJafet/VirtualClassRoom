@@ -1,0 +1,116 @@
+
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(31, 41, 55, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+  
+.dialog {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 500px;
+    max-width: 90vw;
+    position: relative;
+    animation: dialogAppear 0.2s ease-out;
+}
+
+.delete {
+    width: 100%;
+    padding: 0.75rem;
+    background: black;
+    color: var(--red);
+    border: none;
+    border-radius: var(--border);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 1rem;
+}
+
+.delete:hover {
+    background: var(--red);
+    color: black;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.evaluation {
+    width: 100%;
+    min-height: 100vh;
+    background-color: var(--dark);
+    font-family: var(--font-primary);
+    padding: 2rem;
+}
+
+.header {
+    color: var(--white);
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    margin-bottom: 0.5rem;
+}
+
+.content {
+    background-color: var(--dark-light);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 2rem;
+    color: var(--white);
+}
+
+.form_group {
+    margin-bottom: 1.5rem;
+}
+
+.form_group label {
+    display: block;
+    color: var(--gray-light);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.form_group input,
+.form_group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--primary);
+    background-color: var(--dark);
+    color: var(--white);
+    border-radius: var(--radius-md);
+    font-family: var(--font-primary);
+    transition: var(--transition-fast);
+}
+
+.form_group input:focus,
+.form_group textarea:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.button {
+    background-color: var(--primary);
+    color: var(--white);
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.button:hover {
+    background-color: var(--primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+

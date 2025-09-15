@@ -1,0 +1,21 @@
+.profileContainer {
+  max-width: 800px;
+  margin: 1.5rem auto;
+  padding: 1.5rem  3rem;
+  background-color: var(--dark);
+  border-radius: 8px;
+}
+
+.profileContainer h1 {
+  color: var(--secondary-light);
+  margin-top: 0;
+  margin-bottom: 2rem;
+  text-align: center;
+  font-size: 2rem;
+}
+
+@media (max-width: 768px) {
+  .profileContainer {
+    padding: 1.5rem  1rem;
+  } 
+}

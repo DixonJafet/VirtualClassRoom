@@ -1,0 +1,254 @@
+.section{
+        width: 100%;
+        max-height: 85vh;
+        overflow-y: auto;
+        font-family: var(--font-primary);
+
+        align-items: center;
+        margin: 0 auto;   
+        border-radius: var(--border);
+
+}
+
+.section::-webkit-scrollbar{
+    width: 0.7rem;
+}
+.section::-webkit-scrollbar-track {
+    background:var(--dark);
+  }
+  
+.section::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+
+.table_data {
+    position:relative;
+    font-size: 1.2rem;
+    color: rgb(218, 218, 218);
+    display: table;
+
+
+
+    width: 100%;
+
+    overflow-y: hidden ;
+
+    border-right: 1px solid rgba(32, 124, 145, 0.3);
+    border-left: 1px solid rgba(32, 124, 145, 0.3);
+    border-bottom: 1px solid rgba(32, 124, 145, 0.3);
+    align-items: start;
+    align-content: start;
+    background: var(--darker);
+    padding: 0.4rem;
+    padding: 0 10px;
+    /*background: #64b4f65b ;*/
+
+
+}
+
+
+.row{
+    display: table-row;
+    text-align: center;
+
+    width: 100%;
+}
+
+.item {
+    display: table-cell; 
+    background-color: var(--dark);
+    border-radius: var(--border);
+    padding: 0.2rem;
+    height:auto;
+    overflow-wrap: break-word;
+    overflow: hidden;
+    user-select: none;
+    cursor:pointer;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+}
+/*rgb(50, 52, 50);*/
+.item:nth-child(even) {
+background: rgb(49, 69, 49);
+}
+
+.row-head th{
+font-weight: 1500;
+color:var(--dark) !important;
+background-color: #64B5F6  !important;
+}
+
+tr > .item:first-child{
+    pointer-events: none;
+    color: #81C784;
+}
+tr > .item:last-child{
+    pointer-events: none;
+    color: #81C784;
+}
+
+tr  input{
+    text-align: center;
+}
+.tag{
+margin: auto 0.3rem auto 0.3rem;
+font-size: 0.8rem;
+color: black;
+background: rgb(234, 235, 234) !important;
+width: auto;
+}
+.table_data input{
+    border: 0;
+    opacity:0;
+    pointer-events:none;
+    width: 100%;
+    position:absolute;
+    border-radius: var(--border) ;
+
+        &:focus{
+        opacity: 1;
+        outline:2px solid #09f;
+        }
+}
+
+
+
+
+td,th{
+position:relative;
+min-width: 75px;
+
+
+}
+
+th:hover svg{
+    display:inline-block;
+}
+
+
+span,input{
+
+/* position:absolute;*/
+inset:0;
+}
+svg{
+    display: none;
+    position:absolute;
+    right: 0;
+    width:20px;
+    height:24px;
+    fill:white;
+}
+
+tr > .item:first-child{
+    position: sticky;
+    z-index: 1;
+    left: 0;
+}
+
+
+
+thead{
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    width: 100%;
+    height: 2rem;
+  }
+
+.table_container {
+ 
+    overflow-x: auto;
+    background-color: var(--dark-light);
+    border-radius: var(--border);
+    box-shadow: var(--shadow-md);
+}
+
+.table {
+   
+    border-collapse: collapse;
+    font-family: var(--font-primary);
+}
+
+.table th {
+    background-color: var(--primary);
+    color: var(--white);
+    font-weight: 600;
+    padding: 1rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.table th:first-child {
+    border-top-left-radius: var(--border);
+}
+
+.table th:last-child {
+    border-top-right-radius: var(--border);
+}
+
+.table td {
+    padding: 1rem;
+    color: var(--gray-light);
+    border-bottom: 1px solid var(--dark);
+    font-size: 0.875rem;
+}
+
+.table tr:hover {
+    background-color: var(--dark);
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.actions button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: var(--border);
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.edit {
+    background-color: var(--primary);
+    color: var(--white);
+}
+
+.edit:hover {
+    background-color: var(--primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.delete {
+    background-color: var(--secondary);
+    color: var(--white);
+}
+
+.delete:hover {
+    background-color: var(--secondary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.empty_message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-light);
+    font-style: italic;
+}
+
+@media (max-width: 700px){
+    .section{
+        height: 685px;
+    }
+
+    
+}

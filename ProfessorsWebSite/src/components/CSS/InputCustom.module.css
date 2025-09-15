@@ -1,0 +1,104 @@
+.custom-file {
+  display: none;
+}
+
+
+.custom-label,.custom-select {
+  display: inline-block;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: var(--border);
+  cursor: pointer;
+  background-color: var(--dark);
+  color: white;
+  transition: all 0.3s ease-in-out;
+ 
+}
+
+.custom-select{
+  font-style: bolt;
+  padding: 10px 5px;
+  font-weight: 700 
+}
+
+.custom-label{
+  font-style: italic;
+  padding: 10px 20px;
+  font-weight: 400 !important;
+  
+}
+
+.custom-label:hover,.custom-select:hover {
+  border-color: white;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+
+}
+
+.file-name {
+
+  font-style: italic;
+
+  max-width: 250px;
+  overflow-wrap: break-word ;
+
+
+}
+
+input[type="date"] {
+  position:relative;
+
+  width: 91%;
+}
+
+/* Estilos para el ícono del reloj en input time */
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+input[type="time"]::-webkit-inner-spin-button {
+  display: none;
+}
+
+
+.custom-time{
+  min-width: 39%;
+
+}
+
+@media (max-width: 768px) { 
+
+.custom-time{
+  width: 38%;
+
+}
+}
+
+.custom-password{
+  position:relative;
+  width: 100%;
+}
+
+.custom-password-view{
+  position:relative
+}
+
+.eye-icon{
+  display:flex;
+  position:absolute;
+  z-index: 2 ;
+  top: 0.5rem;
+  right: 1rem;
+
+}
+
+.password-container{
+  display: flex;
+  position:relative
+}
+
+a {
+  text-decoration: underline;
+  /*font-style: italic;*/
+  color: var(--green);
+  margin-right: 10px;
+}
