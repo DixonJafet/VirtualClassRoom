@@ -1,12 +1,12 @@
 import React, { useEffect } from "react";
 import { schema } from  '../interfaces/interfaces.ts';
-import { SingUPaction } from "../services/mockRequest.ts";
+import { SingUPaction } from "../services/APIRequest.ts";
 import {useNavigate} from 'react-router-dom'
 import { useState } from "react";
 import { profileFormFormat,loginFormFormat }   from '../utils/FormatForm';
 import { GeneralForm } from "../components/GeneralForm";
 import styles from './CSS/Login.module.css';
-import { LogInAction } from "../services/mockRequest.ts";
+import { LogInAction } from "../services/APIRequest.ts";
 
 
 
@@ -14,6 +14,7 @@ export function Login(){
     const navigate = useNavigate(); 
     const [profileInfo,setProfileInfo] = useState<schema[]>([]);
     const [loginChecked, setLoginChecked] = useState(true);
+    const [loginError, setLoginError] = useState(false);
     useEffect(() => {
         const fetchFormSchemas = async () => {
             const formSchemas = await loginFormFormat(null, null);
@@ -61,15 +62,14 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         });
         if (response) {
             console.log("Login exitoso");
+            setLoginError(false);
             navigate('/Home/ClassRooms');
         } else {
+            setLoginError(true);
+            setTimeout(() => setLoginError(false), 10000);
             console.error("Error en el login");
         }
-
-  
-
-      
-    };
+    }
 
     async function handleChange(event: React.ChangeEvent<HTMLInputElement>){
         const { value } = event.target;
@@ -85,23 +85,28 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         }
     }
 
-    return(
+        return(
 <>
-    <div className={styles.topSection}>
-        <h1>Welcome to VirtualClass.Professor</h1>
-    </div>
-    <div className={styles.loginContainer}>
-      <div className={styles.switchContainer}>
-        <div>
-                <input checked={loginChecked} type="radio" value="login" name="radio" id="login" onChange = {handleChange}/>
-                <label htmlFor= "login"> Login</label>
+        <div className={styles.topSection}>
+                <h1>Welcome to VirtualClass.Professor</h1>
         </div>
-        <div>
-                <input checked={!loginChecked} type="radio" value="singup" name="radio" id = "singup" onChange = {handleChange} />
-                <label htmlFor = "singup"> Sing Up</label>
-        </div>
-      </div>
-       <GeneralForm submitText={'Access'} formSchemas={profileInfo} handleSubmit={handleSubmit}/>
-    </div>  
+        <div className={styles.loginContainer}>
+            <div className={styles.switchContainer}>
+                <div>
+                                <input checked={loginChecked} type="radio" value="login" name="radio" id="login" onChange = {handleChange}/>
+                                <label htmlFor= "login"> Login</label>
+                </div>
+                <div>
+                                <input checked={!loginChecked} type="radio" value="singup" name="radio" id = "singup" onChange = {handleChange} />
+                                <label htmlFor = "singup"> Sing Up</label>
+                </div>
+            </div>
+            {loginError && (
+                <div style={{ color: 'red', marginBottom: '10px', textAlign: 'center' }}>
+                    Login failed. Please check your credentials.
+                </div>
+            )}
+             <GeneralForm submitText={'Access'} formSchemas={profileInfo} handleSubmit={handleSubmit}/>
+        </div>  
 </>)
 }

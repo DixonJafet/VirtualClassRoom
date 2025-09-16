@@ -1,6 +1,6 @@
 /* eslint-disable prefer-const */
 import {schema, Grade} from '../interfaces/interfaces.ts'
-import { GETClassRoomsInfo, GETEvaluationInfo,GETGradeInfo,GETProfileInfo} from '../services/mockRequest.ts'
+import { GETClassRoomsInfo, GETEvaluationInfo,GETGradeInfo,GETProfileInfo} from '../services/APIRequest.ts'
 
 const evaluationFormSchema: Record<string,string> = {
   title:"text",

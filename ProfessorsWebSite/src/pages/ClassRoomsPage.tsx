@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import styles from './CSS/ClassRoomsPage.module.css'
-import {EDITClassRooms, GETAllClassRooms, SETClassRoom,DELETEClassRoom} from '../services/mockRequest.ts'
+import {EDITClassRooms, GETAllClassRooms, SETClassRoom,DELETEClassRoom} from '../services/APIRequest.ts'
 import { Link, useNavigate } from 'react-router'
 import {Card} from '../components/Card'
 import {CSS} from '../utils/Functions.ts'
@@ -111,11 +111,6 @@ export const ClassRoomsPage: React.FC = () => {
                 />
               </li>
             ))}
-            <li>
-              <span>
-                <Link to={'123/ClassRoomEvaluation'}>View Evaluations</Link>
-              </span>
-            </li>
           </ul>
         </div>
       </div>

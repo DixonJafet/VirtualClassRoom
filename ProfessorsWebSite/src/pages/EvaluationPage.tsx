@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import {  EDITEvaluationInfo, GETAllGradesInfo ,EDITGradeInfo,
-          DELEvaluation,NEWEvaluationInfo} from '../services/mockRequest.ts'
+          DELEvaluation,NEWEvaluationInfo} from '../services/APIRequest.ts'
 import {Table} from '../components/Table.tsx'
 import {DynamicObject} from '../interfaces/interfaces.ts'
 import { FloatFrame } from './FloatFrame.tsx';

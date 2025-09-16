@@ -106,6 +106,14 @@ namespace ProfessorAPI.Controllers
             var request = @"Select *, full_name as name from professors where email = @email";
             var result = await DB.QueryFirstOrDefaultAsync<Professor>(request, new { professor.email });
             Professor professor_logged= result;
+
+            if(professor_logged == null)
+            {
+                return new Professor
+                {
+                    professor_id = "0"
+                };
+            }
             var password = professor_logged.password;
             var name = professor_logged.name;
             Console.WriteLine(result.email);

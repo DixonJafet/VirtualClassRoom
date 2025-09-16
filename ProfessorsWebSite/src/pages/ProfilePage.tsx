@@ -6,7 +6,7 @@ import { profileFormFormat } from '../utils/FormatForm';
 import { FloatFrame } from './FloatFrame';
 import { TopSection } from '../components/TopSection';
 import { Link, useNavigate } from 'react-router-dom';
-import {  updateProfileInfo,LogOutAction } from '../services/mockRequest.ts';
+import {  updateProfileInfo,LogOutAction } from '../services/APIRequest.ts';
 
 
 export const ProfilePage: React.FC = () => {

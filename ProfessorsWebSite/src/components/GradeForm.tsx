@@ -2,7 +2,7 @@ import React, { useLayoutEffect,useEffect, useState,useRef,ReactNode } from 'rea
 import { GeneralForm } from '../components/GeneralForm.tsx';
 import {DynamicObject,schema} from '../interfaces/interfaces.ts'
 import { gradeFormFormat } from '../utils/FormatForm.ts'
-import { EDITGradeInfo, GETFeedBakcFile } from '../services/mockRequest.ts';
+import { EDITGradeInfo, GETFeedBakcFile } from '../services/APIRequest.ts';
 interface Props {
         name?: string,
         row?:string,

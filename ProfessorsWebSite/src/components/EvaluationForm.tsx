@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { GeneralForm } from '../components/GeneralForm.tsx';
-import { GETrubricFile,GETstatementFile } from '../services/mockRequest.ts';
+import { GETrubricFile,GETstatementFile } from '../services/APIRequest.ts';
 import {schema} from '../interfaces/interfaces.ts'
 import { evaluationFormFormat } from '../utils/FormatForm.ts'
 import styles from '../pages/CSS/EvaluationPage.module.css'

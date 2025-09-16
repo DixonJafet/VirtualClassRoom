@@ -36,7 +36,7 @@ export interface ClassRoom {
   courseName: string;
   about: string | File;
   aboutFile?: File;
-  schedule: Schedule[] | string;
+  schedule: Schedule[];
   [key: string]: unknown;
 }
 

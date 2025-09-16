@@ -6,7 +6,7 @@ import styles from '../pages/CSS/ClassRoomsPage.module.css'
 import { Dialog } from '../components/Dialog.tsx';
 import { CSS } from '../utils/Functions.ts';
 import { ClassRoom } from '../interfaces/interfaces.ts';
-import { GETAboutFile } from '../services/mockRequest.ts';
+import { GETAboutFile } from '../services/APIRequest.ts';
 
 
 interface Props{
