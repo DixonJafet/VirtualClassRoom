@@ -480,3 +480,6 @@ pnpm-debug.log*
 Thumbs.db
 ProfessorsWebSite/eslint.config.js
 ProfessorsWebSite/src/__App.tsx
+ProfessorAPI/appsettings.Development.json
+ProfessorAPI/appsettings.json
+ProfessorAPI/Properties/launchSettings.json
