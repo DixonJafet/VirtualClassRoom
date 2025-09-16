@@ -419,7 +419,7 @@ FodyWeavers.xsd
 schoolAPI/appsettings.json
 schoolAPI/appsettings.Development.json
 schoolAPI/Properties/launchSettings.json
-schoolAPI/ProfessorAPI.sln
+
 
 
 # Logs
@@ -444,7 +444,6 @@ dist-ssr
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
 *.sw?
 
 
