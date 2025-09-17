@@ -6,6 +6,7 @@ using ProfessorAPI.Connexions;
 using ProfessorAPI.Models;
 using System.Diagnostics.Eventing.Reader;
 using System.IO;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 
 
@@ -14,7 +15,7 @@ namespace ProfessorAPI.Controllers
     public class FileController
     {
 
-
+        private readonly IConfiguration config;
         private readonly MySqlConnection dbconnection;
 
 
@@ -35,7 +36,11 @@ namespace ProfessorAPI.Controllers
             var filePath = "";
             if (file != null)
             {
-                var storagePath = Path.Combine("D:\\Programers\\Diseño_web\\SPA\\SchoolFiles", Code.ToString());
+                var basePath = config.GetSection("FileDB").GetValue<string>("Path");
+                if (string.IsNullOrEmpty(basePath))
+                    throw new InvalidOperationException("FileDB:Path configuration is missing or null.");
+
+                var storagePath = Path.Combine(basePath, Code.ToString());
                 Directory.CreateDirectory(storagePath);
                 var uniqueFileName = $"{Guid.NewGuid()}00_{file?.FileName}";
                 filePath = Path.Combine(storagePath, uniqueFileName);
