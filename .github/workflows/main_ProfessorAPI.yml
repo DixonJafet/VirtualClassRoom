@@ -68,6 +68,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: api-artifact
+          path: ./publish  
+          
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
