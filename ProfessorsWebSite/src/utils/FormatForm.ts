@@ -69,12 +69,30 @@ export async function evaluationFormFormat(classroomCode: string ,name: string |
   if (evaluationInfo) {
     evaluationInfo["prevName"] = name || "";
   }
-  return returnFormSchema(evaluationInfo,evaluationFormSchema)
+  // Map File and undefined values to empty string
+  const evaluationInfoFormatted = evaluationInfo
+    ? Object.fromEntries(
+        Object.entries(evaluationInfo).map(([key, value]) => [
+          key,
+          value instanceof File || value === undefined ? "" : value
+        ])
+      )
+    : null;
+  return returnFormSchema(evaluationInfoFormatted, evaluationFormSchema)
 }
 
 export async function gradeFormFormat(classRoomCode: string, name: string | undefined, evaluation: string | null): Promise<schema[]> {
   const gradeInfo: Grade | null = (name) ? await GETGradeInfo(classRoomCode,name, evaluation) : null;
-  return returnFormSchema(gradeInfo, gradeFormSchema);
+  // Map File and undefined values to empty string
+  const gradeInfoFormatted = gradeInfo
+    ? Object.fromEntries(
+        Object.entries(gradeInfo).map(([key, value]) => [
+          key,
+          value instanceof File || value === undefined ? "" : value
+        ])
+      )
+    : null;
+  return returnFormSchema(gradeInfoFormatted, gradeFormSchema);
 }
 
 export  function returnFormSchema(Info: Record<string,string | number> | null,

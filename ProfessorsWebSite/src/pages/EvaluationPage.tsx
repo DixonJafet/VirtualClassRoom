@@ -26,10 +26,10 @@ async function handleNewEvaluation(formData: FormData): Promise<void>{
   const data: DynamicObject = {};
   formData.forEach((value, key: string) => {data[key] = value as string});
   console.log(data.title);
-  const newCardData: object[] = cardData.map((student: Record<string,string | number>) => {
-    const newInfo = { ...student }; // Clone the object
-    newInfo[data.title as string] = 0; // Add new property
-    return newInfo; // Return modified object
+  const newCardData: Record<string, string | number>[] = cardData.map((student: Record<string, string | number>) => {
+    const newInfo: Record<string, string | number> = { ...student };
+    newInfo[data.title as string] = 0;
+    return newInfo;
   });
   updateCardData(newCardData);
   setFloat(<></>);
@@ -40,14 +40,14 @@ async function handleEditEvaluation(formData:FormData): Promise<void>{
   const prevName = formData.get('prevName') as string;
   const data: DynamicObject = {};
   formData.forEach((value, key: string) => {if (key!= "prevName"){data[key] = value as string}});
-  const newCardData: object[] = cardData.map((student: Record<string,string | number>) => {
-    const newInfo = { ...student }; // Clone the object
+  const newCardData: Record<string, string | number>[] = cardData.map((student: Record<string, string | number>) => {
+    const newInfo: Record<string, string | number> = { ...student };
     const prevValue: string | number | Date = newInfo[prevName];
     if (prevName in newInfo) {
-      delete newInfo[prevName]; // Remove old property
+      delete newInfo[prevName];
     }
-    newInfo[data.title as string] = prevValue; // Add new property
-    return newInfo; // Return modified object
+    newInfo[data.title as string] = prevValue;
+    return newInfo;
   });
   updateCardData(newCardData);
   setFloat(<></>);
@@ -55,9 +55,18 @@ async function handleEditEvaluation(formData:FormData): Promise<void>{
 }
 
 
-async function updateCardData(data: object[]): Promise<void> {
+async function updateCardData(data: Record<string, string | number>[]): Promise<void> {
   if (data.length === 1 && Object.keys(data[0]).length === 0) {
-    data = await GETAllGradesInfo(classroomCode as string);
+    const rawData = await GETAllGradesInfo(classroomCode as string);
+    data = rawData.map((item: DynamicObject) => {
+      const filtered: Record<string, string | number> = {};
+      Object.entries(item).forEach(([key, value]) => {
+        if (typeof value === "string" || typeof value === "number") {
+          filtered[key] = value;
+        }
+      });
+      return filtered;
+    });
   }
   console.log("Data received:", data);
   // Add "total" attribute to each element
@@ -84,10 +93,10 @@ async function updateCardData(data: object[]): Promise<void> {
 
 function deleteEvaluation(evaluation: string){
     //const newHeaders: string[] = headers.filter((header: string) => header !== evaluation);
-    const newData: object[] = cardData.map((info: Record<string,string | number>) => {
-      const newInfo = { ...info }; // Clone the object
-      delete newInfo[evaluation]; // Remove property
-      return newInfo; // Return modified object
+    const newData: Record<string, string | number>[] = cardData.map((info: Record<string, string | number>) => {
+      const newInfo: Record<string, string | number> = { ...info };
+      delete newInfo[evaluation];
+      return newInfo;
     });
     DELEvaluation(classroomCode as string, evaluation)
     updateCardData(newData);
