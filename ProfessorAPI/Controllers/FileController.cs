@@ -15,8 +15,8 @@ namespace ProfessorAPI.Controllers
     public class FileController
     {
 
-        private readonly IConfiguration config;
-        private readonly MySqlConnection dbconnection;
+        private readonly IConfiguration? config;
+        private readonly MySqlConnection? dbconnection;
 
 
         public FileController()
