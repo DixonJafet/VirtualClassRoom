@@ -26,7 +26,7 @@ namespace ProfessorAPI.Controllers
 
         }
 
-        protected MySqlConnection getdbConnection()
+        protected MySqlConnection? getdbConnection()
         {
             return dbconnection;
         }

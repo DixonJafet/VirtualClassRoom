@@ -6,20 +6,20 @@ namespace ProfessorAPI.Binding
     public class FromFormJsonModelBinder : IModelBinder
     {
 
-        public async Task BindModelAsync(ModelBindingContext bindingContext)
+        public Task BindModelAsync(ModelBindingContext bindingContext)
         {
             var valueProviderResult = bindingContext.ValueProvider.GetValue(bindingContext.ModelName);
             if (valueProviderResult == ValueProviderResult.None)
             {
                 bindingContext.Result = ModelBindingResult.Failed();
-                return;
+                return Task.CompletedTask;
             }
 
             var rawValue = valueProviderResult.FirstValue;
             if (string.IsNullOrEmpty(rawValue))
             {
                 bindingContext.Result = ModelBindingResult.Success(null);
-                return;
+                return Task.CompletedTask;
             }
 
             try
@@ -32,6 +32,8 @@ namespace ProfessorAPI.Binding
                 bindingContext.ModelState.TryAddModelError(bindingContext.ModelName, ex.Message);
                 bindingContext.Result = ModelBindingResult.Failed();
             }
+
+            return Task.CompletedTask;
         }
 
 
