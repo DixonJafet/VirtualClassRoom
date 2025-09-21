@@ -273,7 +273,7 @@ export async function DELETEClassRoom(classroomCode: string): Promise<string> {
 export async function LogInAction(data: { email: string; password: string }): Promise<boolean> {
 
   try{
-    const response = await fetch('https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/LogIn', {
+    const response = await fetch('https://localhost:7273/api/profes/LogIn', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include",

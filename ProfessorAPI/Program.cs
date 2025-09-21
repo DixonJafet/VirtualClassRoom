@@ -28,6 +28,8 @@ builder.Services.AddScoped<MyJWT>();
 
 
 var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?.Split(',');
+Console.WriteLine(allowedOrigins.Length);
+Console.WriteLine(allowedOrigins[0]);
 builder.Services.AddCors(options => { 
     
     options.AddPolicy(name:"Policy", 
