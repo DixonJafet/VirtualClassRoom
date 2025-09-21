@@ -15,10 +15,15 @@ namespace ProfessorAPI.Connexions
     {
         private readonly string tokenKey;
         private readonly IConfiguration config;
-        public MyJWT(IConfiguration config) => tokenKey = config.GetSection("JWTkey").GetValue<string>("key");
+
+        public MyJWT(IConfiguration config)
+        {
+            this.config = config ?? throw new ArgumentNullException(nameof(config));
+            tokenKey = config.GetSection("JWTkey").GetValue<string>("key") ?? throw new InvalidOperationException("JWT key is missing in configuration.");
+        }
+
         public string userJWTSession(string user, string ID)
         {
-
             var tokenHandler = new JwtSecurityTokenHandler();
             var bytekey = Encoding.UTF8.GetBytes(tokenKey);
             var tokenDes = new SecurityTokenDescriptor
@@ -38,6 +43,5 @@ namespace ProfessorAPI.Connexions
             string str_token = tokenHandler.WriteToken(token);
             return str_token;
         }
-
     }
 }
