@@ -27,7 +27,7 @@ builder.Services.AddScoped<FileController>();
 builder.Services.AddScoped<MyJWT>();
 
 
-var allowedOrigins = builder.Configuration.GetSection("AllowedCorsOrigins").Get<string[]>();
+var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?.Split(',');
 builder.Services.AddCors(options => { 
     
     options.AddPolicy(name:"Policy", 
