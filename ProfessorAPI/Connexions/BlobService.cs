@@ -15,7 +15,7 @@ namespace ProfessorAPI.Connexions
         private readonly BlobServiceClient _blobServiceClient;
         private readonly string _containerName;
 
-        public BlobService(BlobServiceClient blobServiceClient)
+        public BlobService(BlobServiceClient blobServiceClient, IConfiguration config)
         {
             _containerName = config["BlobStorage:ContainerName"] ?? "files";
             _blobServiceClient = blobServiceClient;
