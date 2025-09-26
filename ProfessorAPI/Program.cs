@@ -6,11 +6,14 @@ using System.Text;
 using ProfessorAPI.Connexions;
 using ProfessorAPI.Interface;
 using ProfessorAPI.Controllers;
+using Azure.Storage.Blobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+var blobConnectionString = builder.Configuration["BlobStorage:ConnectionString"];
 
+builder.Services.AddSingleton(x => new BlobServiceClient(blobConnectionString));
 builder.Services.AddControllers(options =>
 {
     options.ModelBinderProviders.Insert(0, new FromFormJsonModelBinderProvider());

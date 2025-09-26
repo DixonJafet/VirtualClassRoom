@@ -219,7 +219,7 @@ namespace ProfessorAPI.Controllers
 
             result.schedule = schedule_result;
 
-            result.about = FileController.getFileName(result.about);
+            result.about = FileController.getFileName(result?.about);
             return result;
 
         }
@@ -261,7 +261,7 @@ namespace ProfessorAPI.Controllers
                     });
                 }
             }
-            FileHandler.SaveFile(classroom.aboutFile, Path);
+            
             FileHandler.DeleteFile(result.about);
             return result;
         }
@@ -321,7 +321,7 @@ namespace ProfessorAPI.Controllers
             });
             Console.Write(result.classroomCode);
 
-            string about = FileHandler.CreateFileLink(classroom.aboutFile, result.classroomCode);
+            string about = await FileHandler.CreateFileLink(classroom.aboutFile, result.classroomCode);
             var aboutQuery = @"CALL SetAboutFile(@classroomCode, @about)";
 
             var result_with_doc = await DB.QueryFirstOrDefaultAsync<ClassRoom>(aboutQuery, new
@@ -331,7 +331,7 @@ namespace ProfessorAPI.Controllers
 
             });
 
-            await FileHandler.SaveFile(classroom.aboutFile, about);
+            
 
 
             if (classroom.schedule != null )
@@ -378,8 +378,8 @@ namespace ProfessorAPI.Controllers
             });
 
 
-            FileHandler.DeleteFile(result.rubric);
-            FileHandler.DeleteFile(result.statement);
+            FileHandler?.DeleteFile(result.rubric);
+            FileHandler?.DeleteFile(result.statement);
 
             return result;
         }
@@ -387,8 +387,8 @@ namespace ProfessorAPI.Controllers
         public async Task<bool> CreateEvaluation(string professor_id,string classroomCode,Evaluation evaluation)
                     {
 
-                string statement = FileHandler.CreateFileLink(evaluation.statementFile, classroomCode);
-                string rubric = FileHandler.CreateFileLink(evaluation.rubricFile, classroomCode);
+                string statement = await FileHandler.CreateFileLink(evaluation.statementFile, classroomCode);
+                string rubric = await FileHandler.CreateFileLink(evaluation.rubricFile, classroomCode);
 
                 var DB = getdbConnection();
                         var query = @"CALL CreateEvaluation(
@@ -414,11 +414,6 @@ namespace ProfessorAPI.Controllers
                             rubric
                         });
 
-            await FileHandler.SaveFile(evaluation.statementFile, statement);
-
-            await FileHandler.SaveFile(evaluation.rubricFile, rubric);
-
-
 
             return result > 0;
         }
@@ -427,8 +422,8 @@ namespace ProfessorAPI.Controllers
         public async Task<Evaluation> EditEvaluation(string professor_id, string classroomCode, Evaluation evaluation,string prev_title)
         {
 
-            string statement = FileHandler.CreateFileLink(evaluation.statementFile, classroomCode);
-            string rubric = FileHandler.CreateFileLink(evaluation.rubricFile, classroomCode);
+            string statement = await FileHandler.CreateFileLink(evaluation.statementFile, classroomCode);
+            string rubric = await FileHandler.CreateFileLink(evaluation.rubricFile, classroomCode);
 
             var DB = getdbConnection();
             var query = @"CALL EDITEvaluationInfo(
@@ -457,12 +452,8 @@ namespace ProfessorAPI.Controllers
                 prev_title
             });
 
-            FileHandler.DeleteFile(result.rubric);
-            FileHandler.DeleteFile(result.statement);
-
-            await FileHandler.SaveFile(evaluation.statementFile, statement);
-
-            await FileHandler.SaveFile(evaluation.rubricFile, rubric);
+            FileHandler?.DeleteFile(result.rubric);
+            FileHandler?.DeleteFile(result.statement);
 
             return result;
         }
@@ -505,7 +496,7 @@ namespace ProfessorAPI.Controllers
         public async Task<Grade> EditGrade(string professor_id, string classCode, string student_name, string evaluation_title, Grade grade)
         {
 
-            string feedback = FileHandler.CreateFileLink(grade.feedbackFile, classCode);
+            string feedback = await FileHandler.CreateFileLink(grade.feedbackFile, classCode);
            
             var DB = getdbConnection();
             var query = @"CALL EditGradeInfo(@professor_id, @classCode, @student_name, @evaluation_title, @grade, @feedback)";
@@ -520,7 +511,7 @@ namespace ProfessorAPI.Controllers
             });
             FileHandler.DeleteFile(result.feedback);
 
-            await FileHandler.SaveFile(grade.feedbackFile, feedback);
+         
 
             return result ;
 

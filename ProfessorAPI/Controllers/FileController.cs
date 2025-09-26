@@ -17,13 +17,13 @@ namespace ProfessorAPI.Controllers
 
         private readonly IConfiguration? config;
         private readonly MySqlConnection? dbconnection;
+        private readonly BlobService _blobService;
 
-
-        public FileController()
+        // Constructor modified to use dependency injection
+        public FileController(IConfiguration? configuration, BlobService blobService)
         {
-
-         
-
+            config = configuration;
+            _blobService = blobService;
         }
 
         protected MySqlConnection? getdbConnection()
@@ -31,65 +31,40 @@ namespace ProfessorAPI.Controllers
             return dbconnection;
         }
 
-        public string CreateFileLink(IFormFile file, string Code)
-        {
-            var filePath = "";
-            if (file != null)
-            {
-                var basePath = config.GetSection("FileDB").GetValue<string>("Path");
-                if (string.IsNullOrEmpty(basePath))
-                    throw new InvalidOperationException("FileDB:Path configuration is missing or null.");
-
-                var storagePath = Path.Combine(basePath, Code.ToString());
-                Directory.CreateDirectory(storagePath);
-                var uniqueFileName = $"{Guid.NewGuid()}00_{file?.FileName}";
-                filePath = Path.Combine(storagePath, uniqueFileName);
-            }
-            return filePath;
-        }
-
-        // Refactored: Change async void to async Task
-        public async Task SaveFile(IFormFile file, string filePath)
+        // Adapted to upload to Blob Storage and return the unique blob name
+        public async Task<string> CreateFileLink(IFormFile file, string Code)
         {
             if (file != null)
             {
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                     await file.CopyToAsync(stream);
-                }
+                // The storage path is no longer a physical path, but a container.
+                // The new unique name will serve as the file link.
+                var uniqueBlobName = await _blobService.UploadFileAsync(file);
+                return uniqueBlobName;
             }
+            return "";
         }
 
-        public void DeleteFile(string Path)
+        // Adapted to delete from Blob Storage
+        public async Task DeleteFile(string blobName)
         {
-
-
-            string filePath = @Path;
-
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-                Console.WriteLine("File deleted successfully.");
-            }
-            else
-            {
-                Console.WriteLine("File not found.");
-            }
-
+            await _blobService.DeleteFileAsync(blobName);
+            Console.WriteLine("File deleted successfully.");
         }
 
-        public FileStreamResult GetFileStreamResult(string filePath)
+        // Adapted to get the file stream from Blob Storage
+        public async Task<FileStreamResult> GetFileStreamResult(string blobName)
         {
-            if (!File.Exists(filePath))
-                throw new FileNotFoundException("File not found.", filePath);
+            var stream = await _blobService.GetFileAsync(blobName);
+
+            if (stream == null)
+                throw new FileNotFoundException("File not found.", blobName);
 
             var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
             string contentType;
-            if (!provider.TryGetContentType(filePath, out contentType))
+            if (!provider.TryGetContentType(getFileName(blobName), out contentType))
                 contentType = "application/octet-stream";
 
-            var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var fileName = Path.GetFileName(filePath).Split("00_")[1]; 
+            var fileName = getFileName(blobName);
 
             return new FileStreamResult(stream, contentType)
             {
@@ -97,33 +72,25 @@ namespace ProfessorAPI.Controllers
             };
         }
 
-        public static FileStreamResult getFile(string filePath)
+        // Updated to be an async method
+        public static async Task<FileStreamResult> getFile(FileController fileController, string blobName)
         {
-            var fileController = new FileController();
-            return fileController.GetFileStreamResult(filePath);
+            return await fileController.GetFileStreamResult(blobName);
         }
 
-
-        public static string getFileName(string filePath)
+        // This method remains the same, as it only parses the string
+        public static string getFileName(string blobName)
         {
             try
             {
-                return filePath?.Split("00_")[1];
+                // Assuming your old naming convention of `GUID00_FileName.ext` is still used
+                return blobName?.Split("00_PAPI_")[1];
             }
-            catch {
+            catch
+            {
                 return "";
             }
         }
-
-
-
-
-
-
-
-
-
-
 
 
     }

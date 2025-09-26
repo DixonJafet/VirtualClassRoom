@@ -202,14 +202,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
 
 
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProfessor(string id)
-        {
-            var deleted = await interProfessors.DeleteProfessor(new Professor { professor_id = id });
 
-            return NoContent();
-
-        }
 
         [HttpGet("checkCredentials")]
         [Authorize]
