@@ -52,7 +52,7 @@ namespace ProfessorAPI.Controllers
         }
 
         // Adapted to get the file stream from Blob Storage
-        public async Task<FileStreamResult> GetFileStreamResult(string blobName)
+        public async Task<FileStreamResult> getFile(string blobName)
         {
             var stream = await _blobService.GetFileAsync(blobName);
 
@@ -72,11 +72,6 @@ namespace ProfessorAPI.Controllers
             };
         }
 
-        // Updated to be an async method
-        public static async Task<FileStreamResult> getFile(FileController fileController, string blobName)
-        {
-            return await fileController.GetFileStreamResult(blobName);
-        }
 
         // This method remains the same, as it only parses the string
         public static string getFileName(string blobName)

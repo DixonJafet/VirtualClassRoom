@@ -20,13 +20,14 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
     {
         private readonly InterProfessors interProfessors;
         private readonly MyJWT JWT;
+        private readonly FileController FileHandler;
 
 
-
-        public APIConexionController(InterProfessors interProfessors, MyJWT myJWT)
+        public APIConexionController(InterProfessors interProfessors, MyJWT myJWT, FileController myFileController)
         {
             this.interProfessors = interProfessors;
             JWT = myJWT;
+            FileHandler = myFileController;
 
         }
 
@@ -355,7 +356,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
 
 
         [HttpGet("aboutFile/{classroomCode}")]
-        public IActionResult downloadFileAbout(string classroomCode)
+        public async Task<IActionResult> downloadFileAbout(string classroomCode)
         {
 
             var professor_id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -366,7 +367,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
                 .Result
                 .about;
 
-            return FileController.getFile(filePath);
+            return await FileHandler.getFile(filePath);
         }
 
 
@@ -385,7 +386,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
 
             var filePath = evaluation.statement;
 
-            return FileController.getFile(filePath);
+            return await FileHandler.getFile(filePath);
         }
 
         [HttpGet("rubricFile/{classCode}/{evaluation_title}")]
@@ -401,7 +402,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
             if (evaluation == null) return NotFound(new { error = "Evaluation not found" });
 
             var filePath = evaluation.rubric;
-            return FileController.getFile(filePath);
+            return await FileHandler.getFile(filePath);
         }
 
 
@@ -416,7 +417,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
             
             var filePath = response.feedback;
             Console.WriteLine(filePath);
-            return FileController.getFile(filePath);
+            return await FileHandler.getFile(filePath);
         }
 
 

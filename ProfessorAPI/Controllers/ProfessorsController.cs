@@ -19,14 +19,14 @@ namespace ProfessorAPI.Controllers
         class Verify { public int Password_verification { get; set; } };
     
         private readonly MySqlConnection dbconnection;
-        private FileController FileHandler;
+        private readonly FileController FileHandler;
      
 
-        public ProfessorsController(MySqlConnection mySqlConnection)
+        public ProfessorsController(MySqlConnection mySqlConnection, FileController myFileController)
         {
 
             dbconnection = mySqlConnection;
-            FileHandler = new FileController();
+            FileHandler = myFileController;
             
         }
 
@@ -228,7 +228,7 @@ namespace ProfessorAPI.Controllers
         {
             var DB = getdbConnection();
             var query = @"call editclassroom(@professor_id,@classroomCode,@courseName,@about)";
-            string Path = FileHandler.CreateFileLink(classroom.aboutFile, classroomCode);
+            string Path = await FileHandler.CreateFileLink(classroom.aboutFile, classroomCode);
             classroom.about = Path;
             var result = await DB.QueryFirstOrDefaultAsync<ClassRoom>(query, new
             {
