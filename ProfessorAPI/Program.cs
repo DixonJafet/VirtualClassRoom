@@ -14,6 +14,8 @@ var builder = WebApplication.CreateBuilder(args);
 var blobConnectionString = builder.Configuration["BlobStorage:ConnectionString"];
 
 builder.Services.AddSingleton(x => new BlobServiceClient(blobConnectionString));
+builder.Services.AddScoped<BlobService>();
+builder.Services.AddTransient<FileController>();
 builder.Services.AddControllers(options =>
 {
     options.ModelBinderProviders.Insert(0, new FromFormJsonModelBinderProvider());
