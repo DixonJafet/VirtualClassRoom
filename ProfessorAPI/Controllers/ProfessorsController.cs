@@ -179,7 +179,14 @@ namespace ProfessorAPI.Controllers
             {
                 try
                 {
-                    prev_classroom.about = prev_classroom.about.Split("00_")[1];
+                    if (prev_classroom?.about?.Split("00_PAPI")[1] != null) {
+                        prev_classroom.about = prev_classroom?.about?.Split("00_PAPI")[1];
+                    }
+                    else
+                    {
+                        prev_classroom.about = "";
+                    }
+                    
                 }
                 catch { }
             }

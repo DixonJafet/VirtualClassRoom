@@ -73,6 +73,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
             if (!ModelState.IsValid) return BadRequest();
             if (classCode == null) return BadRequest();
             if (professor_id == null) return BadRequest();
+            Console.WriteLine(classroom.aboutFile);
        
             var response = await interProfessors.editClassRoom(professor_id, classCode, classroom);
             if (response == null) return BadRequest();

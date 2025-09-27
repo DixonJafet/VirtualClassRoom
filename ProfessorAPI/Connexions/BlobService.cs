@@ -29,7 +29,7 @@ namespace ProfessorAPI.Connexions
         public async Task<string> UploadFileAsync(IFormFile file)
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+        //    await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
 
             // Generate a unique name for the blob to prevent overwrites
             var uniqueFileName = $"{Guid.NewGuid()}00_PAPI_{file.FileName}";
