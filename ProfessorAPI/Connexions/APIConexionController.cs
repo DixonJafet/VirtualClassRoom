@@ -113,7 +113,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
                     });
             }
             string myJWT = JWT.userJWTSession(professor.name, singed_professor.professor_id);
-            Response.Cookies.Append("SchoolWebToken506", myJWT, new CookieOptions { Secure = true, HttpOnly = true, SameSite = SameSiteMode.Strict });
+            Response.Cookies.Append("SchoolWebToken506", myJWT, new CookieOptions { Secure = true, HttpOnly = true, SameSite = SameSiteMode.None });
 
             return Ok(new Professor { name = singed_professor.name });
         }
@@ -141,7 +141,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
                     });
             }
             string myJWT = JWT.userJWTSession(logged_professor.name, logged_professor.professor_id);
-            Response.Cookies.Append("SchoolWebToken506", myJWT, new CookieOptions { Secure = true, HttpOnly = true, SameSite = SameSiteMode.Strict });
+            Response.Cookies.Append("SchoolWebToken506", myJWT, new CookieOptions { Secure = true, HttpOnly = true, SameSite = SameSiteMode.None });
 
             return Ok(new Professor { name = logged_professor.name });
 
@@ -192,7 +192,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
             {
                 HttpOnly = true,
                 Secure = true,      // true if using HTTPS
-                SameSite =  SameSiteMode.Strict,
+                SameSite =  SameSiteMode.None,
                 // Expire immediately
                        // Match cookie path
             });
