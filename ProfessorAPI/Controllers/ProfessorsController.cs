@@ -179,8 +179,8 @@ namespace ProfessorAPI.Controllers
             {
                 try
                 {
-                    if (prev_classroom?.about?.Split("00_PAPI")[1] != null) {
-                        prev_classroom.about = prev_classroom?.about?.Split("00_PAPI")[1];
+                    if (prev_classroom?.about?.Split("00_PAPI_")[1] != null) {
+                        prev_classroom.about = prev_classroom?.about?.Split("00_PAPI_")[1];
                     }
                     else
                     {
