@@ -141,7 +141,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
                     });
             }
             string myJWT = JWT.userJWTSession(logged_professor.name, logged_professor.professor_id);
-            Response.Cookies.Append("SchoolWebToken506", myJWT, new CookieOptions { Secure = true, HttpOnly = true });
+            Response.Cookies.Append("SchoolWebToken506", myJWT, new CookieOptions { Secure = true, HttpOnly = true, SameSite = SameSiteMode.None });
 
             return Ok(new Professor { name = logged_professor.name });
 
