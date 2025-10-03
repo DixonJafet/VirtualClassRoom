@@ -53,9 +53,7 @@ export async function profileFormFormat(name: string | null): Promise<schema[]> 
 }
 
 export async function classroomFormFormat(classnumber: string | null): Promise<schema[]> {
-  console.log(classnumber)
   let classroomInfo = (classnumber)?await GETClassRoomsInfo(classnumber):null
-  console.log(classroomInfo)
   const days = classroomInfo?.schedule
   const { schedule, ...classroomData } = classroomInfo || {}
   let classroomDataFormated = classroomData as Record<string,string | number>

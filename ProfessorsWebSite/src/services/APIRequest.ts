@@ -20,10 +20,8 @@ export async function NEWEvaluationInfo(data: FormData, classroomCode: string): 
 
     if (!response.ok) throw new Error('Failed to create evaluation');
     const result = await response.json();
-    console.log('Created Evaluation:', result);
     return "success";
   } catch (error) {
-    console.error('Error creating evaluation:', error);
     return "error";
   }
 }
@@ -40,10 +38,8 @@ export async function SETClassRoom(classroom: FormData): Promise<string> {
 
     if (!response.ok) throw new Error('Failed to create classroom');
     const data = await response.json();
-    console.log('Created Classroom:', data);
     return data.classroomCode || "success";
   } catch (error) {
-    console.error('Error creating classroom:', error);
     return "error";
   }
 }
@@ -64,7 +60,6 @@ export async function GETAllGradesInfo(classroomCode: string): Promise<DynamicOb
     // Assuming the API returns an array of StudentData
     return data || [];
   } catch (error) {
-    console.error('Error fetching grades:', error);
     return [];
   }
 }
@@ -80,10 +75,8 @@ export async function DELEvaluation(ClassroomCode: string,evaluation_title: stri
     });
 
     if (!response.ok) throw new Error('Failed to delete evaluation');
-    const result = await response.json();
-    console.log('Evaluation deleted:', result);
+    await response.json();
   } catch (error) {
-    console.error('Error deleting evaluation:', error);
   }
 
 }
@@ -102,10 +95,8 @@ export async function GETEvaluationInfo(classRoomCode: string, evaluationTitle: 
 
     if (!response.ok) throw new Error('Failed to fetch evaluation info');
     const data = await response.json();
-    console.log('Evaluation Info:', data);
     return data as Evaluation;
   } catch (error) {
-    console.error('Error fetching evaluation info:', error);
     return null;
   }
 }
@@ -120,11 +111,9 @@ export async function EDITEvaluationInfo(data: FormData ,classRoomCode: string,e
     });
 
     if (!response.ok) throw new Error('Failed to edit evaluation');
-    const result = await response.json();
-    console.log('Edited Evaluation:', result);
+    await response.json();
     return "success";
   } catch (error) {
-    console.error('Error editing evaluation:', error);
     return "error";
   }
 }
@@ -142,7 +131,6 @@ export async function GETGradeInfo(classCode: string, student_name: string, eval
 
     if (!response.ok) throw new Error('Failed to fetch grade info');
     const data = await response.json();
-    console.log('Grade Info:', data);
     return data as Grade;
   } catch (error) {
     console.error('Error fetching grade info:', error);
@@ -156,8 +144,6 @@ export async function EDITGradeInfo(
   student_name: string,
   evaluation_name: string | null
 ): Promise<string> {
-  console.log(data); // You can adjust this as needed
-
   try {
     const response = await fetch(
       `https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/editGrade/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(student_name)}/${encodeURIComponent(evaluation_name ?? "")}`,
@@ -169,8 +155,7 @@ export async function EDITGradeInfo(
     );
 
     if (!response.ok) throw new Error('Failed to edit grade');
-    const result = await response.json();
-    console.log('Edited Grade:', result);
+    await response.json();
     return "success";
   } catch (error) {
     console.error('Error editing grade:', error);
@@ -183,7 +168,6 @@ export async function EDITGradeInfo(
 
 export async function GETAllClassRooms(professor: string): Promise<ClassRoom[]> {
     let data;
-    console.log(professor);
   try {
     const response = await fetch('https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/ClassRooms',{
       method: 'GET',
@@ -193,21 +177,15 @@ export async function GETAllClassRooms(professor: string): Promise<ClassRoom[]> 
 
     if (!response.ok) throw new Error('Failed to fetch');
     data = await response.json();
-    console.log('Data:', data);
   } catch (err) {
-    console.error('Error:', err);
   }
   // Assuming data is an array of ClassRoom objects
   const classrooms:ClassRoom[] = data['classRooms'] || [];
-  console.log('Classrooms:', classrooms);
   return classrooms;
   
 }
 
 export async function EDITClassRooms(classroom: FormData):Promise<string>{
- // Assuming 'about' is a string, you might want to handle it differently if it's a file.
-    console.log(classroom.get("classroomCode"))
-
   try {
     const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/edit/${classroom.get("classroomCode")}`, {
       method: 'PUT',
@@ -215,10 +193,8 @@ export async function EDITClassRooms(classroom: FormData):Promise<string>{
       body:classroom,
     });
     if (!response.ok) throw new Error('Failed to edit classroom');
-    const data = await response.json();
-    console.log('Edited Classroom:', data);
+    await response.json();
   } catch (error) {
-    console.error('Error editing classroom:', error);
     return "error";
   }   
   
@@ -236,7 +212,7 @@ export async function GETClassRoomsInfo(classroomCode: string): Promise<ClassRoo
     if (!response.ok) throw new Error('Failed to fetch classroom info');
     
     const data = await response.json();
-    console.log('Classroom Info:', data);
+
     
     return data as ClassRoom;
   }catch (error) {
@@ -262,8 +238,7 @@ export async function DELETEClassRoom(classroomCode: string): Promise<string> {
       return "error";
     }
 
-    const result = await response.json(); // or .text(), depending on API
-    console.log('User deleted:', result);
+    await response.json(); // or .text(), depending on API
     return "success";
   } catch (err) {
     console.error(err);
@@ -284,7 +259,7 @@ export async function LogInAction(data: { email: string; password: string }): Pr
   
     }
     const result = await response.json();
-    console.log('Profesor:', result);
+
     return true;
   } catch (error) {
     console.error('Error:', error);     
@@ -293,10 +268,7 @@ export async function LogInAction(data: { email: string; password: string }): Pr
 
 }
 export async function SingUPaction(data: professor): Promise<boolean> {  
-  console.log(data);
-  console.log("JSON body:", JSON.stringify(data));
- 
-  try{
+  try {
     const response = await fetch('https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/SingUp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -317,7 +289,6 @@ export async function SingUPaction(data: professor): Promise<boolean> {
 
 }
 export async function GETProfileInfo(name: string): Promise<professor | null> {
-  console.log(name);
   try {
     const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/Profile`, {
       method: 'GET',
@@ -327,7 +298,6 @@ export async function GETProfileInfo(name: string): Promise<professor | null> {
 
     if (!response.ok) throw new Error('Failed to fetch profile info');
     const data = await response.json();
-    console.log('Profile Info:', data);
     return data;
   } catch (error) {
     console.error('Error fetching profile info:', error);
@@ -336,7 +306,6 @@ export async function GETProfileInfo(name: string): Promise<professor | null> {
 }
 
 export async function updateProfileInfo(data: Record<string, string | number>): Promise<void> {
-  console.log(data);
   try {
     const response = await fetch('https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/UpdateProfileInfo', {
       method: 'PUT',
@@ -346,8 +315,7 @@ export async function updateProfileInfo(data: Record<string, string | number>): 
     });
 
     if (!response.ok) throw new Error('Failed to update profile');
-    const result = await response.json();
-    console.log('Profile updated:', result);
+    await response.json();
   } catch (error) {
     console.error('Error updating profile:', error);
   }
@@ -362,7 +330,6 @@ export async function LogOutAction(): Promise<boolean> {
     });
 
     if (!response.ok) throw new Error('Failed to log out');
-    console.log('Logged out successfully');
     return true;
   } catch (error) {
     console.error('Error logging out:', error);

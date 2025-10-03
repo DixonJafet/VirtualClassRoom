@@ -69,7 +69,7 @@ export function ClassRoomForm({classroomCode,handleSubmitClassRoomForm,deleteCla
                 courseName: '',
                 about: ''
             };   
-            console.log("Form data:", formData.get('about'));
+     
             formData.forEach((value, key: string) => 
                 {if(key.includes('day') && value!=='None'){
                 days.push({day: value as string, time: formData.get(`time-start${parseInt(key.replace('day', ''))+1}`) as string 
@@ -90,7 +90,6 @@ export function ClassRoomForm({classroomCode,handleSubmitClassRoomForm,deleteCla
             const jsonDays = JSON.stringify(days);
          
             formData.set('schedule',jsonDays);
-            console.log("Data to be sent:", data);
 
             handleSubmitClassRoomForm(formData,data);
 

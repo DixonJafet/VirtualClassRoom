@@ -25,7 +25,6 @@ export function EvaluationPage() {
 async function handleNewEvaluation(formData: FormData): Promise<void>{
   const data: DynamicObject = {};
   formData.forEach((value, key: string) => {data[key] = value as string});
-  console.log(data.title);
   const newCardData: Record<string, string | number>[] = cardData.map((student: Record<string, string | number>) => {
     const newInfo: Record<string, string | number> = { ...student };
     newInfo[data.title as string] = 0;
@@ -68,7 +67,6 @@ async function updateCardData(data: Record<string, string | number>[]): Promise<
       return filtered;
     });
   }
-  console.log("Data received:", data);
   // Add "total" attribute to each element
   const updatedData = data.map((item: Record<string, string | number>) => {
     let total = 0;
@@ -119,8 +117,6 @@ async function renderEvaluationForm(name: string | null): Promise<void> {
 async function editData(data: DynamicObject ,metadata: DynamicObject,formData: FormData): Promise<void>{
   const allCardData = cardData
   const toEdit: DynamicObject = allCardData[Number(metadata['row'])]
-  console.log(metadata["column"] );
-   console.log(data['grade'] );
   toEdit[metadata["column"] as string] = data['grade'];
   const name: string = metadata['name'] as string || toEdit['Name'] as string;
   EDITGradeInfo(formData,classroomCode as string,name,metadata['column'] as string);
@@ -128,12 +124,10 @@ async function editData(data: DynamicObject ,metadata: DynamicObject,formData: F
 }
 
 async function renderGradeForm(position:Record<string, string>):Promise<void>{
-  console.log(position)
   const numberRow = Number(position.row);
   const rowObject: Grade = cardData[numberRow] as Grade;
   const name: string = rowObject['Name'] as string;
-  const evaluation = position.column
-  console.log(name, evaluation,rowObject);
+  const evaluation = position.column;
       setFloat(<>
       <FloatFrame  closeFunction = {clean_frame}>
       <GradeForm classRoomCode={classroomCode as string} name={name} evaluation={evaluation}

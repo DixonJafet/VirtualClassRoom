@@ -19,19 +19,14 @@ export async function checkCredentials(): Promise<boolean> {
 
 
           if (response.ok) {
-
-            const data = await response.json();
-            console.log('API check successful:', data);
+            await response.json();
             return true;
-
           } else {
-            console.error('API check failed:', response.statusText);
             return false;
           }
 
 
       }catch (error) {
-          console.error('Error checking credentials:', error);
           return false;
       }
 }

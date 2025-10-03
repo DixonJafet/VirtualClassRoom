@@ -29,7 +29,6 @@ export const ProfilePage: React.FC = () => {
         const formData = new FormData(form);
         const data: Record<string, string | number > = {};
         formData.forEach((value, key: string) => { data[key] = value as string | number });
-        console.log(data);
         const response = await updateProfileInfo(data);
         // Here you would typically send the data to your server
         // await updateProfileInfo(data);

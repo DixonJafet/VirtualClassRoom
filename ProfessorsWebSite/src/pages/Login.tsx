@@ -35,7 +35,6 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     }
 
     async function registerAction(data: { [k: string]: FormDataEntryValue; }) {
-        console.log(data);
         const { name, email,password} = data; // confirmPassword } = data;
         const phone: number = parseInt(data["phone"].valueOf() as string);
         const area_of_expertise = data["areaOfExpertise"]
@@ -48,26 +47,22 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
             area_of_expertise: area_of_expertise as string  , 
            });
         if (response){ 
-            console.log("Registro exitoso");
             navigate('/');
         }
     };
 
     async function loginAction(data:{ [k: string]: FormDataEntryValue; }) {
         const { email, password } = data;
-        console.log(data);
         const response: boolean = await LogInAction({
             email: email as string,
             password: password as string,
         });
         if (response) {
-            console.log("Login exitoso");
             setLoginError(false);
             navigate('/Home/ClassRooms');
         } else {
             setLoginError(true);
             setTimeout(() => setLoginError(false), 10000);
-            console.error("Error en el login");
         }
     }
 

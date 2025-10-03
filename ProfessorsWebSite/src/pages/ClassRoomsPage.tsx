@@ -26,7 +26,6 @@ export const ClassRoomsPage: React.FC = () => {
   }, []);
 
   async function deleteClassroom(classroomCode:string):Promise<void>{
-    console.log(classroomCode);
     const response:string = await DELETEClassRoom(classroomCode);
     const newClassrooms = classes.filter((classroom)=>classroom.classroomCode !== classroomCode)
     setClasses(newClassrooms)
@@ -34,7 +33,6 @@ export const ClassRoomsPage: React.FC = () => {
 
   async function handleFormSubmit(form: FormData, data:ClassRoom): Promise<void>{
 
-    console.log("Data to be saved:", data);
     try{
       if(data.classroomCode===""){
         const  newclassroomCode: string = await SETClassRoom(form);
@@ -43,15 +41,12 @@ export const ClassRoomsPage: React.FC = () => {
       }else{
         const  response: string = await EDITClassRooms(form);
         const updatedClasses = classes.map((classroom) => {
-          console.log(classroom.classRoomNumber);
           
           if (classroom.classroomCode === data.classroomCode) {
-            console.log( { ...classroom, ...data });
             return { ...classroom, ...data };
           }
           return classroom;
         });
-        console.log(response);
         setClasses(updatedClasses);
      
       }
