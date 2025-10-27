@@ -47,7 +47,7 @@ This platform allows professors to manage their classes, assignments, and resour
 
 ---
 
-## 🚀 Quick Start (coming soon)
+## 🚀 Quick Start
 **Recomendation:**
 I highly recommend use the mock User
 email: **jafet.dexi@yahoo.com**
