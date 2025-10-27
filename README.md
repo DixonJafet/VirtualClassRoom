@@ -48,7 +48,12 @@ This platform allows professors to manage their classes, assignments, and resour
 ---
 
 ## 🚀 Quick Start (coming soon)
-Setup and deployment instructions will be added soon.
+**Recomendation:**
+I highly recommend use the mock User
+email: **jafet.dexi@yahoo.com**
+password: **password1234**
+
+[Go to website.](https://virtual-class-room-peach.vercel.app/)
 
 ---
 
