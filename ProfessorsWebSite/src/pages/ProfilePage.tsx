@@ -11,6 +11,7 @@ import {  updateProfileInfo,LogOutAction } from '../services/APIRequest.ts';
 
 export const ProfilePage: React.FC = () => {
     const [profileInfo,setProfileInfo] = useState<schema[]>([]);
+    const [saved, setSaved] = useState(false);
     const navigate = useNavigate();
 
     function singOut(): void {
@@ -30,6 +31,8 @@ export const ProfilePage: React.FC = () => {
         const data: Record<string, string | number > = {};
         formData.forEach((value, key: string) => { data[key] = value as string | number });
         const response = await updateProfileInfo(data);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 10000);
         // Here you would typically send the data to your server
         // await updateProfileInfo(data);
     }
@@ -51,6 +54,11 @@ export const ProfilePage: React.FC = () => {
       </TopSection>
     <div className={styles.profileContainer}>
       <h1>Profile Settings</h1>
+        {saved && (
+          <div style={{ color: 'green', marginBottom: '10px', textAlign: 'center' }}>
+              Profile Saved
+          </div>
+          )}
        <GeneralForm  formSchemas={profileInfo} handleSubmit={updateProfile}/>
     </div>  
     </>

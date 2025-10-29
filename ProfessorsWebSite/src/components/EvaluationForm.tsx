@@ -58,8 +58,8 @@ async function EditEvaluation(event:  React.FormEvent<HTMLFormElement>): Promise
             link.href = url;
             link.download = filename;
             document.body.appendChild(link);
-            //link.click();
-            window.open(url, '_blank');
+            link.click();
+           // window.open(url, '_blank');
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
         }

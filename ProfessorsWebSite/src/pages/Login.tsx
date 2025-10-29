@@ -15,6 +15,7 @@ export function Login(){
     const [profileInfo,setProfileInfo] = useState<schema[]>([]);
     const [loginChecked, setLoginChecked] = useState(true);
     const [loginError, setLoginError] = useState(false);
+    const [loading, setLoading] = useState(false);
     useEffect(() => {
         const fetchFormSchemas = async () => {
             const formSchemas = await loginFormFormat(null, null);
@@ -27,6 +28,7 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const data:{ [k: string]: FormDataEntryValue; }  = Object.fromEntries(formData.entries());
+        setLoading(true);
         if (loginChecked) {
             await loginAction(data);
         } else {
@@ -47,7 +49,12 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
             area_of_expertise: area_of_expertise as string  , 
            });
         if (response){ 
+            setLoading(false);
             navigate('/');
+        }else{
+            setLoading(false);
+            setLoginError(true);
+            setTimeout(() => setLoginError(false), 10000);
         }
     };
 
@@ -58,9 +65,11 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
             password: password as string,
         });
         if (response) {
+            setLoading(false);
             setLoginError(false);
             navigate('/Home/ClassRooms');
         } else {
+            setLoading(false);
             setLoginError(true);
             setTimeout(() => setLoginError(false), 10000);
         }
@@ -99,6 +108,11 @@ async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
             {loginError && (
                 <div style={{ color: 'red', marginBottom: '10px', textAlign: 'center' }}>
                     Login failed. Please check your credentials.
+                </div>
+            )}
+            {loading && (
+                <div style={{ color: 'green', marginBottom: '10px', textAlign: 'center' }}>
+                    Loading Resources ...
                 </div>
             )}
              <GeneralForm submitText={'Access'} formSchemas={profileInfo} handleSubmit={handleSubmit}/>
