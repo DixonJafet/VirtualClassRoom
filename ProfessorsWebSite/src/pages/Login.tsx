@@ -18,7 +18,7 @@ export function Login(){
     const [loading, setLoading] = useState(false);
     useEffect(() => {
         const fetchFormSchemas = async () => {
-            const formSchemas = await loginFormFormat(null, null);
+            const formSchemas = await loginFormFormat('jafet.dexi@yahoo.com', 'password1234');
             setProfileInfo(formSchemas);
         };
         fetchFormSchemas();
