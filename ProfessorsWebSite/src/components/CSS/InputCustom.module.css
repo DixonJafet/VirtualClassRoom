@@ -61,14 +61,14 @@ input[type="time"]::-webkit-inner-spin-button {
 
 
 .custom-time{
-  min-width: 39%;
+  min-width: 35%;
 
 }
 
 @media (max-width: 768px) { 
 
 .custom-time{
-  width: 38%;
+  width: 35%;
 
 }
 }
