@@ -5,7 +5,7 @@
 import React from 'react'
 import { EvaluationPage } from './pages/EvaluationPage.tsx'
 import { ClassRoomsPage } from './pages/ClassRoomsPage.tsx'
-import { Routes, Route, Navigate } from 'react-router'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Home } from './pages/Home.tsx'
 import { Login } from './pages/Login.tsx'
 import { ProfilePage } from './pages/ProfilePage.tsx'

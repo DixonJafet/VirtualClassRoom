@@ -1,6 +1,5 @@
-import { Link, Outlet } from 'react-router'
+import {  Outlet } from 'react-router-dom'
 import styles from './CSS/Home.module.css'
-import { CSS } from '../utils/Functions'
 
 export function Home(){
   return (

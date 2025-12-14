@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import styles from './CSS/ClassRoomsPage.module.css'
 import {EDITClassRooms, GETAllClassRooms, SETClassRoom,DELETEClassRoom} from '../services/APIRequest.ts'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router-dom'
 import {Card} from '../components/Card'
 import {CSS} from '../utils/Functions.ts'
 import { FloatFrame } from './FloatFrame.tsx'

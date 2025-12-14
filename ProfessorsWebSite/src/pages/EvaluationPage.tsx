@@ -4,9 +4,8 @@ import {  EDITEvaluationInfo, GETAllGradesInfo ,EDITGradeInfo,
 import {Table} from '../components/Table.tsx'
 import {DynamicObject} from '../interfaces/interfaces.ts'
 import { FloatFrame } from './FloatFrame.tsx';
-import { useParams } from 'react-router'
+import { useParams, Link } from 'react-router-dom'
 import { TopSection } from '../components/TopSection.tsx';
-import { Link } from 'react-router-dom';
 import { GradeForm } from '../components/GradeForm.tsx';
 import { EvaluationForm } from '../components/EvaluationForm.tsx';
 import { Grade } from '../interfaces/interfaces.ts';
