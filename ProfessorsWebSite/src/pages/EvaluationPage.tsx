@@ -11,6 +11,7 @@ import { EvaluationForm } from '../components/EvaluationForm.tsx';
 import { Grade } from '../interfaces/interfaces.ts';
 import { CSS } from '../utils/Functions.ts';
 import styles from '../components/CSS/TopSection.module.css';
+import tableStyles from '../components/CSS/Table.module.css';
 
 export function EvaluationPage() {
   const [cardData,setCardData] = useState([{}])
@@ -243,7 +244,7 @@ function getCellClassName(value: unknown, key: string): string | undefined {
   }
 
   if (Number.isFinite(percentage) && percentage < 68) {
-    return styles['low-score'];
+    return tableStyles['low-score'];
   }
 }
 
