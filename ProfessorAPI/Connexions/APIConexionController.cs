@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -13,7 +12,6 @@ using System.Security.Permissions;
 
 namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
 {
-    [EnableCors("Policy")]
     [Route("api/profes")] // [controller]
     [ApiController]
     public class APIConexionController : ControllerBase
