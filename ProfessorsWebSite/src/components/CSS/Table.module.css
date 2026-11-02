@@ -74,6 +74,10 @@
 background: rgb(49, 69, 49);
 }
 
+.low-score {
+    color: var(--red) !important;
+}
+
 .row-head th{
 font-weight: 1500;
 color:var(--dark) !important;

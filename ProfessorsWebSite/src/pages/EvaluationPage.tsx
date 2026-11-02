@@ -107,7 +107,7 @@ async function handleEditEvaluation(formData:FormData): Promise<void>{
 
 function updateCardData(data: Record<string, string | number>[]): void {
   // Add "total" attribute to each element
-  const updatedData = data.map((item: Record<string, string | number>) => {
+  const updatedData: Record<string, string | number>[] = data.map((item: Record<string, string | number>) => {
     let total = 0;
     Object.entries(item).forEach(([key, value]) => {
       // Only sum numeric values and skip "Name" or non-numeric fields
@@ -120,6 +120,9 @@ function updateCardData(data: Record<string, string | number>[]): void {
     });
     return { ...item, total: Number(total.toFixed(2)) };
   });
+  updatedData.sort((left, right) =>
+    String(left['Name'] ?? '').localeCompare(String(right['Name'] ?? ''), undefined, { sensitivity: 'base' })
+  );
 
   let Headers: string[] = Object.keys(updatedData[0] ?? {});
   Headers = Headers.map(Header => Header.replaceAll('_', ' '));
@@ -226,6 +229,24 @@ function formatCell(value: unknown, key: string): string {
     : key.toLowerCase() === 'total' ? formatted : String(value);
 }
 
+function getCellClassName(value: unknown, key: string): string | undefined {
+  const column = key.toLowerCase();
+  if (column === 'name') return undefined;
+
+  let percentage = Number(value);
+  if (displayMode === 'pts') {
+    const maxPoints = column === 'total'
+      ? Object.values(evaluationMaxima).reduce((sum, max) => sum + max, 0)
+      : evaluationMaxima[key];
+    if (!maxPoints) return undefined;
+    percentage = percentage / maxPoints * 100;
+  }
+
+  if (Number.isFinite(percentage) && percentage < 68) {
+    return styles['low-score'];
+  }
+}
+
 const percentageUnavailable = isLoading || Object.keys(cardData[0] ?? {}).some(key =>
   key.toLowerCase() !== 'name' && key.toLowerCase() !== 'total' && evaluationMaxima[key] === undefined
 );
@@ -251,7 +272,7 @@ const percentageUnavailable = isLoading || Object.keys(cardData[0] ?? {}).some(k
       </div>
     </TopSection>
     <Table headers = {headers} data={displayedData} editData={handleTableEdit}
-      formatCell={formatCell}
+      formatCell={formatCell} getCellClassName={getCellClassName}
       editableHd editHeaderFunc={renderEvaluationForm} onClickCellFunc={renderGradeForm}>
     </Table>
     {float}

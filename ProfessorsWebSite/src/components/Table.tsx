@@ -15,7 +15,8 @@ interface Props{
     editHeaderFunc: (header: string)=>void,
     editableHd?:boolean,
     onClickCellFunc:(data:Record<string,string>)=>Promise<void>,
-    formatCell?: (value: unknown, key: string)=>string
+    formatCell?: (value: unknown, key: string)=>string,
+    getCellClassName?: (value: unknown, key: string)=>string | undefined
 }
 function setInput(event: React.MouseEvent<HTMLElement>){
     const span: HTMLSpanElement = event.target as  HTMLSpanElement ;
@@ -76,7 +77,8 @@ export const Table: React.FC<Props> = ({
     editHeaderFunc,
     onClickCellFunc,
     editableHd,
-    formatCell
+    formatCell,
+    getCellClassName
 }) =>{
     return (
 
@@ -100,7 +102,7 @@ export const Table: React.FC<Props> = ({
                 { data.map(( ObjectEntry, index)=>(
                     <tr key={`react-table-row-${index}`} id = {`react-table-row-${index}`} className={CSS(styles,"row")} > 
                     {Object.entries(ObjectEntry).map(([key, value])=>(
-                        <td className={CSS(styles,"item")} key={`react-table-column-${key}`} onClick={(event)=>{handleTdClick(event,onClickCellFunc)}} >
+                        <td className={[CSS(styles,"item"), getCellClassName?.(value, key)].filter(Boolean).join(' ')} key={`react-table-column-${key}`} onClick={(event)=>{handleTdClick(event,onClickCellFunc)}} >
                         <span 
                         onClick={(event)=>{setInput(event)}} data-custom-value = {`${key}`}>{formatCell ? formatCell(value, key) : value as string}
                         </span>
