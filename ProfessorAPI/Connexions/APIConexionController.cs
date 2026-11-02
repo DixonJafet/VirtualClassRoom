@@ -336,6 +336,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
             var professor_id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (professor_id == null) return BadRequest();
             var response = await interProfessors.GetGrade(professor_id,classCode, student_name, evaluation_title);
+            if (response == null) return NotFound(new { error = "Grade record not found" });
             return Ok(response);
         }
 
@@ -346,8 +347,10 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
         {
             var professor_id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (professor_id == null) return BadRequest();
+            if (gradeInfo == null) return BadRequest();
             Console.WriteLine(gradeInfo.feedback);
             var response = await interProfessors.EditGrade(professor_id,classCode, student_name, evaluation_title, gradeInfo);
+            if (response == null) return NotFound(new { error = "Grade record not found" });
             return Ok(response);
            // return Ok(new { message = "Grade updated successfully" });
         }
@@ -413,7 +416,7 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
             var professor_id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (professor_id == null) return BadRequest();
             var response = await interProfessors.getFeedBackGrade(professor_id, classCode, student_name, evaluation_title);
-            
+            if (response == null || string.IsNullOrEmpty(response.feedback)) return NotFound(new { error = "Feedback file not found" });
             var filePath = response.feedback;
             Console.WriteLine(filePath);
             return await FileHandler.getFile(filePath);

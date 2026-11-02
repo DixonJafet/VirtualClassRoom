@@ -482,7 +482,7 @@ namespace ProfessorAPI.Controllers
             return evaluation;
         }
 
-        public async Task<Grade> GetGrade(string professor_id, string classCode, string student_name, string evaluation_title)
+        public async Task<Grade?> GetGrade(string professor_id, string classCode, string student_name, string evaluation_title)
         {
             var DB = getdbConnection();
             var query = @"CALL GetGradeInfo(@professor_id, @classCode, @student_name, @evaluation_title)";
@@ -495,12 +495,13 @@ namespace ProfessorAPI.Controllers
             });
 
 
-            result.feedback = FileController.getFileName(result.feedback);
+            if (result == null) return null;
 
+            result.feedback = FileController.getFileName(result.feedback);
             return result;
         }
 
-        public async Task<Grade> EditGrade(string professor_id, string classCode, string student_name, string evaluation_title, Grade grade)
+        public async Task<Grade?> EditGrade(string professor_id, string classCode, string student_name, string evaluation_title, Grade grade)
         {
 
             string feedback = await FileHandler.CreateFileLink(grade.feedbackFile, classCode);
@@ -516,9 +517,12 @@ namespace ProfessorAPI.Controllers
                 grade.grade,
                 feedback
             });
-            FileHandler.DeleteFile(result.feedback);
+            if (result == null) return null;
 
-         
+            if (!string.IsNullOrEmpty(result.feedback))
+            {
+                await FileHandler.DeleteFile(result.feedback);
+            }
 
             return result ;
 
@@ -574,7 +578,7 @@ namespace ProfessorAPI.Controllers
 
 
 
-        public async Task<Grade> getFeedBackGrade(string professor_id, string classCode, string student_name, string evaluation_title)
+        public async Task<Grade?> getFeedBackGrade(string professor_id, string classCode, string student_name, string evaluation_title)
         {
             var DB = getdbConnection();
             var query = @"CALL GetGradeInfo(@professor_id, @classCode, @student_name, @evaluation_title)";

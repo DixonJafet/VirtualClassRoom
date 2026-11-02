@@ -42,9 +42,9 @@ namespace ProfessorAPI.Interface
 
         Task<Evaluation> GetEvaluation(string professor_id, string classCode, string evaluation_title);
 
-        Task<Grade> GetGrade(string professor_id, string classCode, string student_name, string evaluation_title);
+        Task<Grade?> GetGrade(string professor_id, string classCode, string student_name, string evaluation_title);
 
-        Task<Grade> EditGrade(string professor_id, string classCode, string student_name, string evaluation_title, Grade grade);
+        Task<Grade?> EditGrade(string professor_id, string classCode, string student_name, string evaluation_title, Grade grade);
 
         Task<ClassRoom> getAboutClassRoom(string professor_id, string classroomCode);
 
@@ -52,6 +52,6 @@ namespace ProfessorAPI.Interface
 
         Task<Evaluation> getRubricEvaluation(string professor_id, string classCode, string evaluation_title);
 
-        Task<Grade> getFeedBackGrade(string professor_id, string classCode, string student_name, string evaluation_title);
+        Task<Grade?> getFeedBackGrade(string professor_id, string classCode, string student_name, string evaluation_title);
     }
 }
