@@ -6,12 +6,14 @@ import {
   professor
 } from "../interfaces/interfaces";
 
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://classroomapi.runasp.net';
+
 
 export async function NEWEvaluationInfo(data: FormData, classroomCode: string): Promise<string> {
   
 
   try {
-    const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/createEvaluation/${encodeURIComponent(classroomCode)}`, {
+    const response = await fetch(`${API_BASE_URL}/api/profes/createEvaluation/${encodeURIComponent(classroomCode)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include",
@@ -30,7 +32,7 @@ export async function NEWEvaluationInfo(data: FormData, classroomCode: string): 
 export async function SETClassRoom(classroom: FormData): Promise<string> {
 
   try {
-    const response = await fetch('https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/newClassRoom', {
+    const response = await fetch(`${API_BASE_URL}/api/profes/newClassRoom`, {
       method: 'POST',
       credentials: "include",
       body: classroom
@@ -48,7 +50,7 @@ export async function GETAllGradesInfo(classroomCode: string): Promise<DynamicOb
   //return( mokData);
 
     try {
-    const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/ClassRoomEvaluation/${classroomCode}`, {
+    const response = await fetch(`${API_BASE_URL}/api/profes/ClassRoomEvaluation/${classroomCode}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include",
@@ -68,7 +70,7 @@ export async function GETAllGradesInfo(classroomCode: string): Promise<DynamicOb
 export async function DELEvaluation(ClassroomCode: string,evaluation_title: string): Promise<void> {
 
   try {
-    const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/deleteEvaluation/${encodeURIComponent(ClassroomCode)}/${encodeURIComponent(evaluation_title)}`, {
+    const response = await fetch(`${API_BASE_URL}/api/profes/deleteEvaluation/${encodeURIComponent(ClassroomCode)}/${encodeURIComponent(evaluation_title)}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include"
@@ -85,7 +87,7 @@ export async function DELEvaluation(ClassroomCode: string,evaluation_title: stri
 export async function GETEvaluationInfo(classRoomCode: string, evaluationTitle: string ): Promise<Evaluation | null> {
   try {
     const response = await fetch(
-      `https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/getEvaluation/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(evaluationTitle)}`,
+      `${API_BASE_URL}/api/profes/getEvaluation/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(evaluationTitle)}`,
       {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
@@ -104,7 +106,7 @@ export async function GETEvaluationInfo(classRoomCode: string, evaluationTitle: 
 export async function EDITEvaluationInfo(data: FormData ,classRoomCode: string,evaluationTitle: string): Promise<string> {
  
   try {
-    const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/editEvaluation/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(evaluationTitle)}`, {
+    const response = await fetch(`${API_BASE_URL}/api/profes/editEvaluation/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(evaluationTitle)}`, {
       method: 'PUT',
       credentials: "include",
       body: data,
@@ -121,7 +123,7 @@ export async function EDITEvaluationInfo(data: FormData ,classRoomCode: string,e
 export async function GETGradeInfo(classCode: string, student_name: string, evaluation_name: string | null): Promise<Grade | null> {
   try {
     const response = await fetch(
-      `https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/grade/${encodeURIComponent(classCode)}/${encodeURIComponent(student_name)}/${encodeURIComponent(evaluation_name ?? "")}`,
+      `${API_BASE_URL}/api/profes/grade/${encodeURIComponent(classCode)}/${encodeURIComponent(student_name)}/${encodeURIComponent(evaluation_name ?? "")}`,
       {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
@@ -146,7 +148,7 @@ export async function EDITGradeInfo(
 ): Promise<string> {
   try {
     const response = await fetch(
-      `https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/editGrade/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(student_name)}/${encodeURIComponent(evaluation_name ?? "")}`,
+      `${API_BASE_URL}/api/profes/editGrade/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(student_name)}/${encodeURIComponent(evaluation_name ?? "")}`,
       {
         method: 'PUT',
         credentials: "include",
@@ -169,7 +171,7 @@ export async function EDITGradeInfo(
 export async function GETAllClassRooms(professor: string): Promise<ClassRoom[]> {
     let data;
   try {
-    const response = await fetch('https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/ClassRooms',{
+    const response = await fetch(`${API_BASE_URL}/api/profes/ClassRooms`,{
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include",
@@ -187,7 +189,7 @@ export async function GETAllClassRooms(professor: string): Promise<ClassRoom[]> 
 
 export async function EDITClassRooms(classroom: FormData):Promise<string>{
   try {
-    const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/edit/${classroom.get("classroomCode")}`, {
+    const response = await fetch(`${API_BASE_URL}/api/profes/edit/${classroom.get("classroomCode")}`, {
       method: 'PUT',
       credentials: "include",
       body:classroom,
@@ -203,7 +205,7 @@ export async function EDITClassRooms(classroom: FormData):Promise<string>{
 
 export async function GETClassRoomsInfo(classroomCode: string): Promise<ClassRoom | null> {
   try{
-    const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/edit/${classroomCode}`, {
+    const response = await fetch(`${API_BASE_URL}/api/profes/edit/${classroomCode}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include",
@@ -227,7 +229,7 @@ export async function GETClassRoomsInfo(classroomCode: string): Promise<ClassRoo
 
 export async function DELETEClassRoom(classroomCode: string): Promise<string> {
    try {
-    const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/delete/${classroomCode}`, {
+    const response = await fetch(`${API_BASE_URL}/api/profes/delete/${classroomCode}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include"
@@ -248,7 +250,7 @@ export async function DELETEClassRoom(classroomCode: string): Promise<string> {
 export async function LogInAction(data: { email: string; password: string }): Promise<boolean> {
 
   try{
-    const response = await fetch('https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/LogIn', {
+    const response = await fetch(`${API_BASE_URL}/api/profes/LogIn`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include",
@@ -269,7 +271,7 @@ export async function LogInAction(data: { email: string; password: string }): Pr
 }
 export async function SingUPaction(data: professor): Promise<boolean> {  
   try {
-    const response = await fetch('https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/SingUp', {
+    const response = await fetch(`${API_BASE_URL}/api/profes/SingUp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include",
@@ -290,7 +292,7 @@ export async function SingUPaction(data: professor): Promise<boolean> {
 }
 export async function GETProfileInfo(name: string): Promise<professor | null> {
   try {
-    const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/Profile`, {
+    const response = await fetch(`${API_BASE_URL}/api/profes/Profile`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include",
@@ -307,7 +309,7 @@ export async function GETProfileInfo(name: string): Promise<professor | null> {
 
 export async function updateProfileInfo(data: Record<string, string | number>): Promise<void> {
   try {
-    const response = await fetch('https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/UpdateProfileInfo', {
+    const response = await fetch(`${API_BASE_URL}/api/profes/UpdateProfileInfo`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include",
@@ -323,7 +325,7 @@ export async function updateProfileInfo(data: Record<string, string | number>): 
 
 export async function LogOutAction(): Promise<boolean> {
   try {
-    const response = await fetch('https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/LogOut', {
+    const response = await fetch(`${API_BASE_URL}/api/profes/LogOut`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: "include",
@@ -343,7 +345,7 @@ export async function LogOutAction(): Promise<boolean> {
 
 export async function GETAboutFile(classroomCode: string ): Promise<Blob> {
         try{
-        const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/aboutFile/${classroomCode}`, {
+        const response = await fetch(`${API_BASE_URL}/api/profes/aboutFile/${classroomCode}`, {
           method: 'GET',
           credentials: "include",
         });
@@ -364,7 +366,7 @@ export async function GETAboutFile(classroomCode: string ): Promise<Blob> {
 export async function GETrubricFile(classRoomCode: string, evaluationTitle: string ):  Promise<Blob> {
   try {
     const response = await fetch(
-      `https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/rubricFile/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(evaluationTitle)}`,
+      `${API_BASE_URL}/api/profes/rubricFile/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(evaluationTitle)}`,
       {       
           method: 'GET',
           credentials: "include",
@@ -385,7 +387,7 @@ export async function GETrubricFile(classRoomCode: string, evaluationTitle: stri
 export async function GETstatementFile(classRoomCode: string, evaluationTitle: string ):  Promise<Blob> {
   try {
     const response = await fetch(
-      `https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/statementFile/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(evaluationTitle)}`,
+      `${API_BASE_URL}/api/profes/statementFile/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(evaluationTitle)}`,
       {       
           method: 'GET',
           credentials: "include",
@@ -404,7 +406,7 @@ export async function GETstatementFile(classRoomCode: string, evaluationTitle: s
 
 export async function GETFeedBakcFile(classroomCode: string, student_name:string, evaluation_name:string): Promise<Blob> {
         try{
-        const response = await fetch(`https://professorapi-fxebbwdnhqcbc5au.mexicocentral-01.azurewebsites.net/api/profes/feedBackFile/${encodeURIComponent(classroomCode)}/${encodeURIComponent(student_name)}/${encodeURIComponent(evaluation_name ?? "")}`, {
+        const response = await fetch(`${API_BASE_URL}/api/profes/feedBackFile/${encodeURIComponent(classroomCode)}/${encodeURIComponent(student_name)}/${encodeURIComponent(evaluation_name ?? "")}`, {
           method: 'GET',
           credentials: "include",
         });

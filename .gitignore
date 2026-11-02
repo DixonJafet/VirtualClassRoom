@@ -482,3 +482,19 @@ ProfessorsWebSite/src/__App.tsx
 ProfessorAPI/appsettings.Development.json
 
 ProfessorAPI/Properties/launchSettings.json
+
+# Environment / local configuration variables
+variables.txt
+
+
+# ---- Secrets & sensitive server config ----
+# appsettings with credentials (JWT key, DB connection string)
+# Real values live in server environment variables via web.config
+ProfessorAPI/appsettings.json
+ProfessorAPI/appsettings.Development.json
+
+# web.config holds <environmentVariables> with JWT key + MySQL credentials
+ProfessorAPI/web.config
+
+# Publish output folder (contains copies of appsettings with potential secrets)
+publish/appsettings.json

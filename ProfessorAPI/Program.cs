@@ -6,53 +6,62 @@ using System.Text;
 using ProfessorAPI.Connexions;
 using ProfessorAPI.Interface;
 using ProfessorAPI.Controllers;
-using Azure.Storage.Blobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-var blobConnectionString = builder.Configuration["BlobStorage:ConnectionString"];
-
-builder.Services.AddSingleton(x => new BlobServiceClient(blobConnectionString));
 builder.Services.AddScoped<BlobService>();
 builder.Services.AddTransient<FileController>();
 builder.Services.AddControllers(options =>
 {
     options.ModelBinderProviders.Insert(0, new FromFormJsonModelBinderProvider());
 });
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerGen();
 
-builder.Services.AddSingleton(new MySqlConnection(builder.Configuration.GetConnectionString("MySQLConnnection")));
+var mysqlConnString = builder.Configuration.GetConnectionString("MySQLConnnection")
+    ?? builder.Configuration.GetConnectionString("MySQLConnection")
+    ?? builder.Configuration["MYSQL_ADDON_URI"];
 
+builder.Services.AddTransient(sp => new MySqlConnection(mysqlConnString));
 
 builder.Services.AddScoped<InterProfessors, ProfessorsController>();
 builder.Services.AddScoped<FileController>();
 builder.Services.AddScoped<MyJWT>();
 
+var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) 
+    ?? Array.Empty<string>();
 
-var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?.Split(',') ?? Array.Empty<string>();
-Console.WriteLine(allowedOrigins.Length);
-Console.WriteLine(allowedOrigins[0]);
 builder.Services.AddCors(options => { 
-    
-    options.AddPolicy(name:"Policy", 
+    options.AddPolicy(name: "Policy", 
         policy =>
-                { policy.WithOrigins(allowedOrigins)
-                    .AllowCredentials()
-                    .AllowAnyHeader()
-                    .AllowAnyMethod(); 
-                }); 
+        { 
+            if (allowedOrigins.Length > 0)
+            {
+                policy.WithOrigins(allowedOrigins)
+                      .AllowCredentials()
+                      .AllowAnyHeader()
+                      .AllowAnyMethod(); 
+            }
+            else
+            {
+                policy.SetIsOriginAllowed(_ => true)
+                      .AllowCredentials()
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            }
+        }); 
 });
 
 builder.Services.AddAuthorization();
 
-
 builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
 {
-    var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                                                builder.Configuration.GetSection("JWTkey").GetValue<string>("key")));
+    var jwtKey = builder.Configuration.GetSection("JWTkey").GetValue<string>("key")
+        ?? "new-jwt-key-for-classroom-api-in-project";
+    var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
     var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256Signature);
 
     opt.RequireHttpsMetadata = false;
@@ -75,22 +84,10 @@ builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
             return Task.CompletedTask;
         }
     };
-
 });
-    
-
-
-
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    
-   //  app.UseSwagger();
-    // app.UseSwaggerUI();
-}
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseCors("Policy");

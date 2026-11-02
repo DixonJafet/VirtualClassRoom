@@ -1,77 +1,115 @@
-﻿
-
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-
 
 namespace ProfessorAPI.Connexions
 {
     public class BlobService
     {
-        private readonly IConfiguration? config;
-        private readonly BlobServiceClient _blobServiceClient;
-        private readonly string _containerName;
+        private readonly string _storageFolder;
 
-        public BlobService(BlobServiceClient blobServiceClient, IConfiguration config)
+        public BlobService(IConfiguration config, IWebHostEnvironment env)
         {
-            _containerName = config["BlobStorage:ContainerName"] ?? "files";
-            _blobServiceClient = blobServiceClient;
+            var configuredPath = config["FileStorage:Path"] ?? config["FileDB:Path"];
+            if (!string.IsNullOrEmpty(configuredPath))
+            {
+                if (Path.IsPathRooted(configuredPath) && Directory.Exists(configuredPath))
+                {
+                    _storageFolder = configuredPath;
+                }
+                else
+                {
+                    _storageFolder = Path.GetFullPath(Path.Combine(env.ContentRootPath, configuredPath));
+                }
+            }
+            else
+            {
+                var candidates = new[]
+                {
+                    Path.Combine(env.ContentRootPath, "ClassRoomFiles"),
+                    Path.Combine(AppContext.BaseDirectory, "ClassRoomFiles"),
+                    Path.Combine(env.ContentRootPath, "..", "ClassRoomFiles"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "ClassRoomFiles"),
+                    Path.Combine(Directory.GetCurrentDirectory(), "..", "ClassRoomFiles")
+                };
+
+                var found = candidates.FirstOrDefault(Directory.Exists);
+                _storageFolder = found != null
+                    ? Path.GetFullPath(found)
+                    : Path.Combine(env.ContentRootPath, "ClassRoomFiles");
+            }
+
+            if (!Directory.Exists(_storageFolder))
+            {
+                Directory.CreateDirectory(_storageFolder);
+            }
         }
 
         /// <summary>
-        /// Uploads a file to Azure Blob Storage and returns its unique name.
+        /// Uploads a file to the hoster file storage (ClassRoomFiles) and returns its unique name.
         /// </summary>
-        /// <param name="file">The file to upload.</param>
-        /// <returns>The unique name of the uploaded blob.</returns>
         public async Task<string> UploadFileAsync(IFormFile file)
         {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-        //    await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
-
-            // Generate a unique name for the blob to prevent overwrites
-            var uniqueFileName = $"{Guid.NewGuid()}00_PAPI_{file.FileName}";
-            var blobClient = containerClient.GetBlobClient(uniqueFileName);
-
-            using (var stream = file.OpenReadStream())
+            if (!Directory.Exists(_storageFolder))
             {
-                await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = file.ContentType });
+                Directory.CreateDirectory(_storageFolder);
+            }
+
+            var uniqueFileName = $"{Guid.NewGuid()}00_PAPI_{file.FileName}";
+            var filePath = Path.Combine(_storageFolder, uniqueFileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                await file.CopyToAsync(stream);
             }
 
             return uniqueFileName;
         }
 
         /// <summary>
-        /// Retrieves a file as a stream from Azure Blob Storage.
+        /// Retrieves a file stream from the hoster file storage (ClassRoomFiles).
         /// </summary>
-        /// <param name="blobName">The unique name of the blob to retrieve.</param>
-        /// <returns>A Stream of the file content or null if not found.</returns>
-        public async Task<Stream> GetFileAsync(string blobName)
+        public Task<Stream?> GetFileAsync(string blobName)
         {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            var blobClient = containerClient.GetBlobClient(blobName);
+            var filePath = Path.Combine(_storageFolder, blobName);
 
-            if (!await blobClient.ExistsAsync())
+            if (!File.Exists(filePath))
             {
-                return null; // File not found
+                var candidatePaths = new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "ClassRoomFiles", blobName),
+                    Path.Combine(Directory.GetCurrentDirectory(), "ClassRoomFiles", blobName),
+                    Path.Combine(Directory.GetCurrentDirectory(), "..", "ClassRoomFiles", blobName)
+                };
+
+                var alt = candidatePaths.FirstOrDefault(File.Exists);
+                if (alt != null) filePath = alt;
             }
 
-            return await blobClient.OpenReadAsync();
+            if (!File.Exists(filePath))
+            {
+                return Task.FromResult<Stream?>(null);
+            }
+
+            Stream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return Task.FromResult<Stream?>(stream);
         }
 
         /// <summary>
-        /// Deletes a file from Azure Blob Storage.
+        /// Deletes a file from the hoster file storage (ClassRoomFiles).
         /// </summary>
-        /// <param name="blobName">The unique name of the blob to delete.</param>
-        public async Task DeleteFileAsync(string blobName)
+        public Task DeleteFileAsync(string blobName)
         {
-            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            var blobClient = containerClient.GetBlobClient(blobName);
-            await blobClient.DeleteIfExistsAsync();
+            var filePath = Path.Combine(_storageFolder, blobName);
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+            return Task.CompletedTask;
         }
-
-
     }
 }

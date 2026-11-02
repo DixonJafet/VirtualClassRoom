@@ -22,7 +22,7 @@ export const InputFile= ({value,label,downloadFunction,index} : Props & {downloa
         type="file" 
         id={label+index} 
         name={label} 
-        accept = {'application/pdf'}
+        accept = {'.pdf,.txt,application/pdf,text/plain'}
         onChange={setUploadDoc}/>   
         <span className={CSS(styles,"file-name")} id = {`uploaded-file-${label}`}>
         {thisValue ? 

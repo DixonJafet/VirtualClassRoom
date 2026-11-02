@@ -1,4 +1,5 @@
-﻿using Dapper;
+using Dapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MySql.Data.MySqlClient;
 using MySqlX.XDevAPI.Common;
@@ -19,6 +20,8 @@ namespace ProfessorAPI.Controllers
         private readonly MySqlConnection? dbconnection;
         private readonly BlobService _blobService;
 
+        private static readonly string[] AllowedExtensions = { ".pdf", ".txt" };
+
         // Constructor modified to use dependency injection
         public FileController(IConfiguration? configuration, BlobService blobService)
         {
@@ -31,11 +34,24 @@ namespace ProfessorAPI.Controllers
             return dbconnection;
         }
 
+        public static bool IsValidFile(IFormFile? file)
+        {
+            if (file == null || file.Length == 0) return true;
+            var ext = Path.GetExtension(file.FileName);
+            if (string.IsNullOrEmpty(ext)) return false;
+            return AllowedExtensions.Contains(ext.ToLowerInvariant());
+        }
+
         // Adapted to upload to Blob Storage and return the unique blob name
         public async Task<string> CreateFileLink(IFormFile file, string Code)
         {
-            if (file != null)
+            if (file != null && file.Length > 0)
             {
+                if (!IsValidFile(file))
+                {
+                    throw new BadHttpRequestException("Only .pdf and .txt files are allowed.");
+                }
+
                 // The storage path is no longer a physical path, but a container.
                 // The new unique name will serve as the file link.
                 var uniqueBlobName = await _blobService.UploadFileAsync(file);

@@ -1,4 +1,4 @@
-
+import { API_BASE_URL } from '../services/APIRequest';
 
 export function CSS(styles:CSSModuleClasses,...list: string[]):string{
 
@@ -9,7 +9,7 @@ export function CSS(styles:CSSModuleClasses,...list: string[]):string{
 
 export async function checkCredentials(): Promise<boolean> {
       try{
-          const response = await fetch('https://localhost:7273/api/profes/checkCredentials', {
+          const response = await fetch(`${API_BASE_URL}/api/profes/checkCredentials`, {
             method: 'GET',    
             headers: {
               'Content-Type': 'application/json',
