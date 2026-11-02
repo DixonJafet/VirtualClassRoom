@@ -79,10 +79,9 @@ export function InputNumber({label,value,index} : Props): JSX.Element{
         </>)}
 
 export function InputDate({label,value,index} : Props): JSX.Element{
-    const today = new Date().toISOString().split("T")[0];
     value = String(value).split("T")[0];
     return(<>
-        <input type={'date'} id={label+index} min={today} max={'2026-01-01'}
+        <input type={'date'} id={label+index}
             defaultValue={value} 
             name={label}
         
