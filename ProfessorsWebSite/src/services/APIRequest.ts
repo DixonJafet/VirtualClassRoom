@@ -6,7 +6,14 @@ import {
   professor
 } from "../interfaces/interfaces";
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://classroomapi.runasp.net';
+const configuredApiUrl = import.meta.env.VITE_API_URL || 'https://classroomapi.runasp.net';
+const parsedApiUrl = new URL(configuredApiUrl);
+
+if (parsedApiUrl.protocol !== 'https:') {
+  throw new Error('VITE_API_URL must use HTTPS.');
+}
+
+export const API_BASE_URL = parsedApiUrl.toString().replace(/\/$/, '');
 
 
 export async function NEWEvaluationInfo(data: FormData, classroomCode: string): Promise<string> {
@@ -425,4 +432,3 @@ export async function GETFeedBakcFile(classroomCode: string, student_name:string
       return null as unknown as Blob;
 
 }
-

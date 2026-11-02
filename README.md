@@ -35,6 +35,7 @@ This platform allows professors to manage their classes, assignments, and resour
 - Uses **JWT (JSON Web Tokens)** for secure authentication and browser session management  
 - **Encrypted passwords** stored in the MySQL database  
 - Ensures safe communication between frontend and backend using **HTTP-only cookies** and **HTTPS**
+- Frontend API requests require HTTPS; set `VITE_API_URL` to an HTTPS URL when configuring a custom API host
 
 ---
 

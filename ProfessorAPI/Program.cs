@@ -30,28 +30,23 @@ builder.Services.AddScoped<InterProfessors, ProfessorsController>();
 builder.Services.AddScoped<FileController>();
 builder.Services.AddScoped<MyJWT>();
 
-var allowedOrigins = builder.Configuration["AllowedCorsOrigins"]?
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) 
-    ?? Array.Empty<string>();
+var configuredOrigins = builder.Configuration["AllowedCorsOrigins"]?
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? new[] { "https://virtual-class-room-peach.vercel.app", "https://localhost:5173", "https://10.0.0.5:5173" };
+var allowedOrigins = configuredOrigins
+    .Where(origin => Uri.TryCreate(origin, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps)
+    .Append("https://virtual-class-room-peach.vercel.app")
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
 
 builder.Services.AddCors(options => { 
     options.AddPolicy(name: "Policy", 
         policy =>
         { 
-            if (allowedOrigins.Length > 0)
-            {
-                policy.WithOrigins(allowedOrigins)
-                      .AllowCredentials()
-                      .AllowAnyHeader()
-                      .AllowAnyMethod(); 
-            }
-            else
-            {
-                policy.SetIsOriginAllowed(_ => true)
-                      .AllowCredentials()
-                      .AllowAnyHeader()
-                      .AllowAnyMethod();
-            }
+            policy.WithOrigins(allowedOrigins)
+                  .AllowCredentials()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
         }); 
 });
 

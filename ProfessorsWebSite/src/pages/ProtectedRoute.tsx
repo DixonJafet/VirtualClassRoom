@@ -7,6 +7,3 @@ interface Props{
 export const ProtectedRoute: React.FC<Props> = ({ children }) => {
   return  children;
 };
-
-//"http://localhost:5000/api/auth"
-
