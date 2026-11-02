@@ -238,6 +238,17 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
 
         }
 
+        [HttpGet("ClassRoomEvaluationMaxima/{classCode}")]
+        [Authorize]
+        public async Task<IActionResult> GetClassRoomEvaluationMaxima(string classCode)
+        {
+            var professor_id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(classCode) || professor_id == null) return BadRequest();
+
+            var response = await interProfessors.GetClassRoomEvaluationMaxima(professor_id, classCode);
+            return Ok(response);
+        }
+
         [HttpPost("newClassRoom")]
         [Authorize]
         public async Task<IActionResult> CreateClassRoom([FromForm] ClassRoom classRoom)

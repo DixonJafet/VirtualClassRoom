@@ -312,8 +312,22 @@ namespace ProfessorAPI.Controllers
             return evaluation_Results; 
 
         
-     
+
         }
+
+        public async Task<IEnumerable<Evaluation>> GetClassRoomEvaluationMaxima(string professor_id, string classCode)
+        {
+            var DB = getdbConnection();
+            const string query = @"
+                SELECT e.title, e.value
+                FROM evaluations e
+                INNER JOIN classrooms c ON c.classroom_id = e.classroom_id
+                WHERE c.classroomCode = @classCode AND c.professor_id = @professor_id
+                ORDER BY e.evaluation_id";
+
+            return await DB.QueryAsync<Evaluation>(query, new { professor_id, classCode });
+        }
+
         public async Task<ClassRoom> createClassRoom(string professor_id, ClassRoom classroom)
         {
             var DB = getdbConnection();

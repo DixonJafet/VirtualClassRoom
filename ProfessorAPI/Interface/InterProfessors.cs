@@ -31,6 +31,8 @@ namespace ProfessorAPI.Interface
 
         Task<IEnumerable<object>> getClassRoomEvaluation(string professor_id, string classCode);
 
+        Task<IEnumerable<Evaluation>> GetClassRoomEvaluationMaxima(string professor_id, string classCode);
+
         Task<ClassRoom> createClassRoom(string professor_id,ClassRoom classroom);
 
 

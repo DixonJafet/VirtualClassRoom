@@ -73,6 +73,35 @@ export async function GETAllGradesInfo(classroomCode: string): Promise<DynamicOb
   }
 }
 
+export async function GETClassRoomEvaluationMaxima(
+  classroomCode: string
+): Promise<Record<string, number> | null> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/profes/ClassRoomEvaluationMaxima/${encodeURIComponent(classroomCode)}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch evaluation maxima (${response.status} ${response.statusText})`);
+    }
+
+    const evaluations: Array<{ title?: string; value?: number }> = await response.json();
+    return Object.fromEntries(
+      evaluations
+        .filter(evaluation => evaluation.title && Number.isFinite(Number(evaluation.value)) && Number(evaluation.value) > 0)
+        .map(evaluation => [evaluation.title as string, Number(evaluation.value)])
+    );
+  } catch (error) {
+    console.error('Error fetching classroom evaluation maxima:', error);
+    return null;
+  }
+}
+
 
 export async function DELEvaluation(ClassroomCode: string,evaluation_title: string): Promise<void> {
 
@@ -102,10 +131,13 @@ export async function GETEvaluationInfo(classRoomCode: string, evaluationTitle: 
       }
     );
 
-    if (!response.ok) throw new Error('Failed to fetch evaluation info');
+    if (!response.ok) {
+      throw new Error(`Failed to fetch evaluation info (${response.status} ${response.statusText})`);
+    }
     const data = await response.json();
     return data as Evaluation;
   } catch (error) {
+    console.error(`Error fetching evaluation "${evaluationTitle}":`, error);
     return null;
   }
 }

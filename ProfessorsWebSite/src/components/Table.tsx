@@ -14,14 +14,15 @@ interface Props{
     editData: (data:Record<string,string>,metaData:Record<string,string>,inputForm: FormData)=>Promise<void>,
     editHeaderFunc: (header: string)=>void,
     editableHd?:boolean,
-    onClickCellFunc:(data:Record<string,string>)=>Promise<void>
+    onClickCellFunc:(data:Record<string,string>)=>Promise<void>,
+    formatCell?: (value: unknown, key: string)=>string
 }
 function setInput(event: React.MouseEvent<HTMLElement>){
     const span: HTMLSpanElement = event.target as  HTMLSpanElement ;
     const table_cell: HTMLTableCellElement = span.closest('td') as HTMLTableCellElement;
     const input: HTMLInputElement = table_cell.querySelector('input') as HTMLInputElement;
     input.disabled = false;
-    input.value = span.textContent as string
+    input.value = (span.textContent as string).replace(/%$/, '')
 
     input.focus();
 
@@ -74,7 +75,8 @@ export const Table: React.FC<Props> = ({
     editData,
     editHeaderFunc,
     onClickCellFunc,
-    editableHd
+    editableHd,
+    formatCell
 }) =>{
     return (
 
@@ -100,7 +102,7 @@ export const Table: React.FC<Props> = ({
                     {Object.entries(ObjectEntry).map(([key, value])=>(
                         <td className={CSS(styles,"item")} key={`react-table-column-${key}`} onClick={(event)=>{handleTdClick(event,onClickCellFunc)}} >
                         <span 
-                        onClick={(event)=>{setInput(event)}} data-custom-value = {`${key}`}>{value as string}
+                        onClick={(event)=>{setInput(event)}} data-custom-value = {`${key}`}>{formatCell ? formatCell(value, key) : value as string}
                         </span>
             
                         <input
