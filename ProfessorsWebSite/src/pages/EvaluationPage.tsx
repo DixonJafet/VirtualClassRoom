@@ -232,13 +232,11 @@ function formatCell(value: unknown, key: string): string {
 
 function getCellClassName(value: unknown, key: string): string | undefined {
   const column = key.toLowerCase();
-  if (column === 'name') return undefined;
+  if (column !== 'total') return undefined;
 
   let percentage = Number(value);
   if (displayMode === 'pts') {
-    const maxPoints = column === 'total'
-      ? Object.values(evaluationMaxima).reduce((sum, max) => sum + max, 0)
-      : evaluationMaxima[key];
+    const maxPoints = Object.values(evaluationMaxima).reduce((sum, max) => sum + max, 0);
     if (!maxPoints) return undefined;
     percentage = percentage / maxPoints * 100;
   }
