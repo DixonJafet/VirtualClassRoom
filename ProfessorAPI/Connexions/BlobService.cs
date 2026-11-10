@@ -50,7 +50,7 @@ namespace ProfessorAPI.Connexions
         }
 
         /// <summary>
-        /// Uploads a file to the hoster file storage (ClassRoomFiles) and returns its unique name.
+        /// Uploads a file to the configured hoster file storage and returns its unique name.
         /// </summary>
         public async Task<string> UploadFileAsync(IFormFile file)
         {
@@ -71,7 +71,7 @@ namespace ProfessorAPI.Connexions
         }
 
         /// <summary>
-        /// Retrieves a file stream from the hoster file storage (ClassRoomFiles).
+        /// Retrieves a file stream from the configured hoster file storage.
         /// </summary>
         public Task<Stream?> GetFileAsync(string blobName)
         {
@@ -100,7 +100,7 @@ namespace ProfessorAPI.Connexions
         }
 
         /// <summary>
-        /// Deletes a file from the hoster file storage (ClassRoomFiles).
+        /// Deletes a file from the configured hoster file storage.
         /// </summary>
         public Task DeleteFileAsync(string blobName)
         {

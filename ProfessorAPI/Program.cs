@@ -6,6 +6,10 @@ using System.Text;
 using ProfessorAPI.Connexions;
 using ProfessorAPI.Interface;
 using ProfessorAPI.Controllers;
+using ProfessorAPI.Mcp;
+using Microsoft.AspNetCore.Authentication;
+using ModelContextProtocol.Server;
+using OpenIddict.Validation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,9 +30,23 @@ var mysqlConnString = builder.Configuration.GetConnectionString("MySQLConnnectio
 
 builder.Services.AddTransient(sp => new MySqlConnection(mysqlConnString));
 
+if (string.IsNullOrWhiteSpace(mysqlConnString))
+{
+    throw new InvalidOperationException("A MySQL connection string is required.");
+}
+
 builder.Services.AddScoped<InterProfessors, ProfessorsController>();
 builder.Services.AddScoped<FileController>();
 builder.Services.AddScoped<MyJWT>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AnalyticsTools>();
+builder.Services.AddScoped<ClassroomResources>();
+builder.Services
+    .AddMcpServer()
+    .WithHttpTransport()
+    .WithTools<AnalyticsTools>()
+    .WithResources<ClassroomResources>()
+    .WithPrompts<AnalyticsPrompts>();
 
 var configuredOrigins = builder.Configuration["AllowedCorsOrigins"]?
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -50,14 +68,52 @@ builder.Services.AddCors(options => {
         }); 
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("McpReadOnly", policy =>
+    {
+        policy.AddAuthenticationSchemes("McpBearer");
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("mcp_access", "read");
+    });
+});
 
-builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
+var mcpIssuer = builder.Configuration["McpOAuth:Issuer"];
+var mcpResource = builder.Configuration["McpOAuth:ResourceUrl"];
+var allowLoopbackHttp = builder.Environment.IsDevelopment();
+var mcpOAuthEnabled = !string.IsNullOrWhiteSpace(mcpIssuer);
+if (mcpOAuthEnabled)
+{
+    if (!Uri.TryCreate(mcpIssuer, UriKind.Absolute, out var issuerUri) ||
+        !IsAllowedOAuthUrl(issuerUri, allowLoopbackHttp) ||
+        !Uri.TryCreate(mcpResource, UriKind.Absolute, out var resourceUri) ||
+        !IsAllowedOAuthUrl(resourceUri, allowLoopbackHttp))
+    {
+        throw new InvalidOperationException(
+            "When configured, McpOAuth:Issuer and McpOAuth:ResourceUrl must be absolute HTTPS URLs (loopback HTTP is allowed in Development).");
+    }
+
+    builder.Services.AddOpenIddict()
+        .AddValidation(options =>
+        {
+            options.SetIssuer(issuerUri);
+            options.AddAudiences(resourceUri.AbsoluteUri);
+            options.UseSystemNetHttp();
+            options.UseAspNetCore();
+        });
+}
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = "Bearer";
+    options.DefaultAuthenticateScheme = "Bearer";
+    options.DefaultChallengeScheme = "Bearer";
+})
+    .AddJwtBearer("Bearer", opt =>
 {
     var jwtKey = builder.Configuration.GetSection("JWTkey").GetValue<string>("key")
         ?? "new-jwt-key-for-classroom-api-in-project";
     var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-    var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256Signature);
 
     opt.RequireHttpsMetadata = false;
     opt.TokenValidationParameters = new TokenValidationParameters()
@@ -77,9 +133,19 @@ builder.Services.AddAuthentication("Bearer").AddJwtBearer("Bearer", opt =>
             }
 
             return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            if (context.Principal?.HasClaim("mcp_access", "read") == true)
+            {
+                context.Fail("MCP access tokens cannot be used with the regular API.");
+            }
+
+            return Task.CompletedTask;
         }
     };
-});
+})
+    .AddScheme<AuthenticationSchemeOptions, McpTokenAuthenticationHandler>("McpBearer", _ => { });
 
 var app = builder.Build();
 
@@ -89,4 +155,11 @@ app.UseCors("Policy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapMcp("/mcp").RequireAuthorization("McpReadOnly");
 app.Run();
+
+static bool IsAllowedOAuthUrl(Uri uri, bool allowLoopbackHttp)
+{
+    return uri.Scheme == Uri.UriSchemeHttps ||
+        (allowLoopbackHttp && uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback);
+}

@@ -115,16 +115,9 @@ namespace ProfessorAPI.Controllers
                 };
             }
             var password = professor_logged.password;
-            var name = professor_logged.name;
-            Console.WriteLine(result.email);
-
-            
-            var salt = BC.GenerateSalt(6);
             bool verify = BC.Verify(professor.password,password);
 
-            Console.WriteLine(verify);
             if (verify) {
-                Console.WriteLine(password);
                 return new Professor {
                     name = professor_logged.name,
                     professor_id = professor_logged.professor_id

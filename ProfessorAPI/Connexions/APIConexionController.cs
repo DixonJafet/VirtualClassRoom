@@ -121,12 +121,9 @@ namespace ProfessorAPI.Connexions //Access-Control-Allow-Origin
         public async Task<IActionResult> LogIn([FromBody] Professor professor)
         {
 
-            Console.WriteLine(professor);
-
             if (professor == null) return BadRequest();
             if (!ModelState.IsValid) return BadRequest(ModelState);
             Professor logged_professor = await interProfessors.LogIn(professor);
-            Console.WriteLine(logged_professor);
 
 
             if (logged_professor.professor_id == "0")
