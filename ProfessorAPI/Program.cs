@@ -41,6 +41,7 @@ builder.Services.AddScoped<MyJWT>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AnalyticsTools>();
 builder.Services.AddScoped<ClassroomResources>();
+builder.Services.AddScoped<IMcpOAuthAuthorizationStore, McpOAuthAuthorizationStore>();
 builder.Services
     .AddMcpServer()
     .WithHttpTransport()

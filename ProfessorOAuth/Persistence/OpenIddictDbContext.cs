@@ -8,6 +8,10 @@ public sealed class OpenIddictDbContext(DbContextOptions<OpenIddictDbContext> op
     {
         base.OnModelCreating(builder);
         builder.UseOpenIddict();
+        builder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication", application =>
+        {
+            application.Property<string>("ClientId").HasMaxLength(512).UseCollation("utf8mb4_bin");
+        });
         builder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreToken", token =>
         {
             token.Property<string>("Subject").HasMaxLength(255);

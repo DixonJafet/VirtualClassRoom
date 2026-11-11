@@ -1,268 +1,105 @@
-ProfessorOAuth on Azure - Bicep Deployment Handoff
-==================================================
 
-Purpose
--------
-Deploy the existing ProfessorOAuth ASP.NET Core service to Azure App Service.
-Use Azure Bicep for repeatable infrastructure. Keep OAuth separate from the
-existing ProfessorAPI host. Use Azure Key Vault and managed identity for
-certificate/private-key access and application secrets. Do not deploy or
-modify production infrastructure until the owner reviews the plan and approves
-the target subscription, region, resource names, and cost.
+Use the same Host(publich profile of MonsterASP.net) for the API and the same Azure service  for the OAuth deployments
 
-The immediate goal is to make MCP OAuth available without making the regular
-website depend on this service. If ProfessorOAuth is unavailable, the website
-and its existing professor login/JWT flow should continue to work.
+edit the API or the OAuth server to follow this /(website just if is very necesary)
 
-Repository and implementation context
--------------------------------------
-- Solution: ProfessorAPI/ProfessorAPI.sln
-- OAuth project: ProfessorOAuth/ProfessorOAuth.csproj
-- OAuth startup/OpenIddict configuration: ProfessorOAuth/Program.cs
-- OAuth authorize, token exchange, and dynamic client registration:
-  ProfessorOAuth/Mcp/McpOAuthController.cs
-- Professor sign-in: ProfessorOAuth/Mcp/McpOAuthLoginController.cs
-- Existing professor credential validation:
-  ProfessorOAuth/Services/ProfessorCredentialService.cs
-- OpenIddict EF Core context and existing migration:
-  ProfessorOAuth/Persistence/
-- API token validation and MCP endpoint:
-  ProfessorAPI/Program.cs and ProfessorAPI/Mcp/McpTokenAuthenticationHandler.cs
-- More behavior and deployment notes: ProfessorAPI/MCP.md
+MCP + OAUTH ON AZURE — IMPLEMENTATION GUIDE For an existing ASP.NET Core
+/ C# application with existing users
 
-The service targets .NET 8 and uses OpenIddict 7.7.2, EF Core/Pomelo MySQL,
-Dapper, MySql.Data, and BCrypt.Net. It supports authorization-code + PKCE
-(S256), refresh tokens, dynamic public-client registration, consent, and
-existing professor accounts. Access tokens last 15 minutes; refresh tokens
-last 30 days. The OAuth service uses the same MySQL database as ProfessorAPI.
+GOAL Let a user sign in to your website’s existing account and then
+authorize Claude, ChatGPT, or another compatible MCP client to use your
+remote MCP server.
 
-ProfessorOAuth currently loads two PFX files from disk in Production:
-- OpenIddict signing certificate (JWT signing)
-- OpenIddict encryption certificate (protects internal OpenIddict artifacts)
+RECOMMENDED AZURE ARCHITECTURE
 
-The project currently includes App_Data/OpenIddict/*.pfx in publish output.
-Change this before publishing: no private certificate file may be committed,
-copied into a publish artifact, or deployed with the application. Remove this
-publish inclusion and replace disk loading with runtime Key Vault retrieval.
-Preserve development certificates only for Development.
+1.  Auth/API application (ASP.NET Core)
+    -   Keep your existing users, user database, password verification,
+        and website login.
+    -   Add OpenIddict to this application as the OAuth 2.1 / OpenID
+        Connect authorization server.
+    -   Reuse the existing login session/cookie for the browser-based
+        authorization step. Do not make users create a second account.
+    -   Store OpenIddict application, authorization, and token records
+        in your existing database (or the same Azure SQL database).
+2.  MCP application (ASP.NET Core)
+    -   Host the MCP endpoint on Azure App Service.
+    -   Expose Streamable HTTP, for example: https://mcp.example.com/mcp
+    -   Validate OAuth access tokens issued by your authorization
+        server.
+    -   Use the token’s subject/user ID to access only that user’s
+        permitted data.
+3.  Azure services
+    -   Azure App Service: host the Auth/API app and MCP app. They may
+        be separate App Services or separate apps initially; keep the
+        public HTTPS URLs stable.
+    -   Azure SQL Database: use your existing database if it is already
+        hosted there; otherwise retain your current database and connect
+        securely.
+    -   Azure Key Vault: store signing/encryption certificates and other
+        secrets.
+    -   App Service Managed Identity: let each app access Key Vault
+        without storing Key Vault credentials in configuration.
+    -   Application Insights: monitor authentication and MCP errors.
 
-Production issuer and resource
-------------------------------
-Choose the final public Azure App Service hostname before provisioning the
-production issuer. The issuer is the exact canonical HTTPS URL, including its
-trailing slash, for example:
+IMPORTANT: OpenIddict is a framework, not a hosted OAuth service. You
+deploy and configure it inside your ASP.NET Core application. OpenIddict
+provides OAuth and OIDC server functionality, but do not assume it
+automatically implements MCP-specific CIMD client discovery/validation.
+That part must be implemented and tested separately or provided by a
+compatible authorization-server implementation.
 
-  https://<chosen-app-name>.azurewebsites.net/
+IMPLEMENTATION STEPS
 
-Set these on ProfessorOAuth:
-- McpOAuth__Issuer = the final public issuer URL above.
-- McpOAuth__ResourceUrl = https://classroomapi.runasp.net/mcp
-- ConnectionStrings__MySQLConnection = reference/value for the shared MySQL DB.
-- Key Vault certificate identifiers/names and other non-secret settings as
-  required by the implementation.
+STEP 1 — PRESERVE YOUR EXISTING USERS - Do not migrate, duplicate, or
+recreate your users. - Keep your current user table and existing
+password-hashing/verification logic. - Connect OpenIddict to the
+existing user system. If you use ASP.NET Core Identity, integrate it
+directly. If you use custom authentication, implement the OpenIddict
+authorization flow so it authenticates users through your existing login
+system. - Keep your current website session cookie for browser login.
+The MCP client must never receive the website cookie or the user’s
+password.
 
-On the existing ProfessorAPI host, set:
-- McpOAuth__Issuer = exactly the same issuer URL, including trailing slash.
-- McpOAuth__ResourceUrl = https://classroomapi.runasp.net/mcp.
+STEP 2 — ADD OPENIDDICT TO THE AUTH APPLICATION - Add the OpenIddict
+ASP.NET Core and Entity Framework Core packages. - Configure OpenIddict
+Server with: * Authorization Code flow. * PKCE with S256 required. *
+Refresh tokens, with rotation/reuse protection. * HTTPS metadata and
+endpoints. * A dedicated MCP audience/resource and limited scopes. - Add
+the OpenIddict database tables using EF Core migrations. - Configure a
+persistent signing certificate and encryption certificate. Do not use
+temporary/development certificates in production. - Put production
+certificates/secret material in Azure Key Vault. Enable Managed Identity
+on the App Service and grant it only the required Key Vault permissions.
 
-The API now treats MCP OAuth as optional. When its issuer is unset, the regular
-API and website login can start; OAuth tokens are unavailable until configured.
-Do not set the API's OAuth issuer until the Azure OAuth service is deployed and
-its public discovery endpoint works.
+STEP 3 — IMPLEMENT THE USER CONSENT PAGE - When an MCP client starts
+OAuth, send the user to your authorization endpoint. - If the user is
+not logged in, redirect them to your existing login page. - After login,
+show a consent page identifying the client (for example, Claude or
+ChatGPT) and the requested permissions. - Let the user approve or deny
+access. - Record the authorization and scopes for that user. - Support
+revocation: users must be able to revoke an MCP client’s access.
 
-Key Vault certificate design - required investigation
------------------------------------------------------
-Do not assume that storing a certificate in Key Vault automatically makes its
-private key usable by OpenIddict. Current code calls
-AddSigningCertificate(X509Certificate2) and AddEncryptionCertificate(...),
-so the runtime needs certificate objects with usable private keys.
+STEP 4 — ISSUE MCP-SPECIFIC TOKENS - After consent, issue an OAuth
+access token for the MCP API. - Include a stable user identifier in the
+“sub” claim. - Set the audience (“aud”) specifically to your MCP API. -
+Include only approved scopes, for example: mcp:profile.read
+mcp:orders.read - Use short-lived access tokens (for example, 10–15
+minutes). - Use refresh tokens only if needed by the client; rotate them
+and revoke them when access is revoked. - Do NOT reuse your website’s
+existing JWT as the MCP access token unless it is deliberately
+redesigned for this audience and OAuth purpose. Do not accept website
+session cookies at the MCP endpoint.
 
-Before implementing, verify current Microsoft/Azure SDK behavior and choose
-one supported design:
+STEP 5 — PROTECT THE MCP SERVER - Require a valid Bearer access token
+for every protected MCP request. - Validate signature, issuer, audience,
+expiry, and scopes. - Obtain the user ID from the validated token’s
+“sub” claim. - Enforce authorization in every tool/API operation. Never
+trust a user ID supplied as a tool argument when it could be taken from
+the token instead. - Ensure a user can only read or modify records they
+are authorized to access. - Return HTTP 401 for missing/invalid tokens
+and 403 for insufficient permission.
 
-1. Key Vault certificate with an exportable private key:
-   - Create NEW, distinct signing and encryption certificates in Key Vault.
-   - Configure them to be exportable only if required by the selected runtime
-     loading method.
-   - Use ProfessorOAuth's system-assigned managed identity to retrieve the
-     certificate material at startup, import it in memory using ephemeral/
-     non-persisted key storage, validate the private key and expiry, then pass
-     the certificates to OpenIddict.
-   - Fetch certificate material by Key Vault certificate/secret identifier
-     with an appropriate Azure SDK and managed identity credential.
-   - Do not put base64 PFX bytes, PFX passwords, or private-key material in
-     Bicep parameters, source files, pipeline logs, or plaintext app settings.
-   - Grant only the managed identity the minimum required Key Vault data-plane
-     permission to retrieve the named certificate/secret. Prefer RBAC and
-     narrowly scoped role assignments over broad vault-wide access where
-     practical.
-
-2. A non-exportable Key Vault key / remote signing design:
-   - Use only if OpenIddict can be correctly integrated with a remote
-     Key-Vault-backed signing key and public-key/JWKS publication.
-   - This is not a drop-in replacement for X509Certificate2 in the current
-     code. Prove signing, key identification, JWKS publication, validation,
-     and rotation end-to-end before choosing it.
-
-Do not silently fall back to local PFX files, development keys, symmetric
-secrets, or an untrusted key if Key Vault is unavailable. Fail startup with a
-clear error. Keep signing and encryption keys separate. Do not reuse the PFX,
-password, or certificate pair previously used during IIS testing: those
-credentials were exposed and must be considered compromised. Generate new
-production keys and rotate any related exposed credentials.
-
-Bicep infrastructure goals
---------------------------
-Create reusable Bicep modules/parameters rather than hard-coding environment
-names or secrets. Expected resources and settings:
-
-- Resource group deployment scoped to an owner-approved subscription/region.
-- Azure App Service Plan suitable for a continuously available .NET 8 service.
-  Prefer an Always On-capable tier (Basic or above); verify current regional
-  pricing and .NET 8 availability before deployment. Avoid a plan that sleeps
-  in production.
-- Linux or Windows App Service selected explicitly. Configure .NET 8, HTTPS
-  only, minimum TLS 1.2 (or current platform recommendation), Always On,
-  disabled FTP, and secure deployment settings. Do not expose SCM credentials.
-- System-assigned managed identity for the web app.
-- Key Vault with RBAC authorization, soft delete, and purge protection enabled.
-  Do not disable recovery protections for production.
-- Two new, separate Key Vault certificates: signing and encryption. Decide
-  whether certificate creation is done by Bicep or a separately approved
-  secure provisioning step; never pass private PFX data through Bicep.
-- Least-privilege Key Vault role assignment(s) for the App Service identity,
-  scoped to only the required secret/certificate material. Confirm the selected
-  runtime method works with that exact role before applying it.
-- App Insights / Log Analytics or an equivalent diagnostic destination. Do
-  not log passwords, connection strings, authorization codes, access tokens,
-  refresh tokens, cookies, or PFX bytes.
-- Persistent ASP.NET Core Data Protection keys for the login cookie. Prefer a
-  private Blob container in a Storage Account, with managed-identity access
-  restricted to the app. Protect stored Data Protection keys at rest (for
-  example with Key Vault) if supported by the selected implementation.
-- App settings should contain issuer/resource values and Key Vault identifiers,
-  not private key bytes or secrets. Prefer Key Vault references or runtime
-  managed-identity retrieval for secrets. Do not put secret values in Bicep
-  outputs or deployment logs.
-- Use Bicep secure parameters only where unavoidable. Prefer provisioning
-  secrets/certificates out-of-band with a documented, audited step.
-- Consider staging slots for safe updates if supported by the chosen App
-  Service tier; do not add cost/resources without approval.
-
-The MySQL database is currently hosted outside Azure (Clever Cloud). Confirm
-that App Service outbound traffic can reach it over TLS, configure provider
-firewall/allowlists as needed, and test connectivity from Azure. Do not open
-MySQL to all internet sources unnecessarily. Create/use a dedicated restricted
-database identity for ProfessorOAuth where feasible:
-- read professor IDs, names, email addresses, and password hashes from the
-  professors table (needed to preserve existing logins);
-- read/write only the OpenIddict application, authorization, scope, and token
-  tables;
-- no schema administration in the runtime identity.
-
-The checked-in OpenIddict migration was already applied to the current
-production database. Inspect migration history before any migration command.
-Never drop/recreate the existing tables or apply a schema change to production
-without explicit review and approval.
-
-Required application changes
-----------------------------
-1. Replace local PFX path/password loading in ProfessorOAuth/Program.cs with a
-   typed, testable certificate provider using Azure managed identity and Key
-   Vault. Use async startup loading if required by the SDK. Ensure all retrieved
-   certificate/key objects are disposed correctly at application shutdown.
-2. Remove the PFX publish Content Include from ProfessorOAuth.csproj. Ensure
-   no PFX or secret file is copied into build/publish output.
-3. Configure and persist ASP.NET Core Data Protection keys for cookie
-   continuity across App Service restarts/instances. Use managed identity.
-4. Ensure forwarded HTTPS/proxy behavior is safe on App Service; issuer remains
-   the fixed canonical HTTPS URL. Do not allow arbitrary Host headers to
-   determine the issuer.
-5. Add a non-sensitive health/readiness endpoint or equivalent check. It may
-   confirm app readiness but must not disclose certificate thumbprints,
-   secrets, configuration values, or internal exception messages publicly.
-6. Preserve CSRF protection, secure HttpOnly/SameSite cookies, login and client
-   registration rate limits, exact redirect URI validation, S256 PKCE, allowed
-   scopes, and access-token lifetime.
-7. Preserve current login semantics: professor email/password is checked
-   against BCrypt hashes in the existing MySQL professors table. Never log
-   submitted passwords. Do not migrate, reset, or alter professor accounts.
-8. Keep ProfessorAPI's normal website/JWT behavior independent from OAuth.
-   After OAuth is deployed, configure the same issuer on the API so it can
-   validate OAuth tokens for /mcp.
-
-Security and operations requirements
--------------------------------------
-- Rotate exposed DB credentials and JWT signing key. Rotate compromised PFX
-  certificates/passwords; do not reuse them.
-- Do not copy any value from ProfessorAPI/web.config, publish settings,
-  password files, environment variables, or local secrets into this handoff,
-  source control, Bicep parameters, screenshots, or chat.
-- Keep .gitignore protections and verify `git status` contains no secrets,
-  private keys, PFX files, generated publish output, or local settings.
-- Use managed identity for Azure-to-Key-Vault and Azure-to-Storage access.
-- Do not use a client secret for the App Service's Azure identity.
-- Make database and certificate configuration explicit; fail startup clearly
-  rather than silently using development or fallback credentials.
-- Set up alerting for startup failures, Key Vault access denied/throttling,
-  certificate expiry, and MySQL connectivity failures.
-- Document certificate renewal and key rotation. During rotation, preserve
-  token validation for all unexpired tokens: publish/retain old public signing
-  keys as required until tokens signed with them have expired. Confirm OpenIddict
-  and API metadata/JWKS caching behavior before removing a key.
-
-Deployment and validation sequence
-----------------------------------
-1. Inspect current source, build, ignored files, App Service .NET 8 support,
-   Azure region availability, Key Vault certificate retrieval semantics, and
-   MySQL network constraints. Do not deploy during initial code inspection.
-2. Implement certificate retrieval, Data Protection persistence, health
-   checks, Bicep modules, and safe app configuration. Add tests.
-3. Build and test both projects. Verify OAuth starts using a test Key Vault and
-   test-only professor credentials/database. Do not test with a real user's
-   password.
-4. Validate Bicep (`az bicep build` or current equivalent) and run
-   `what-if`. Show the resource plan, identity permissions, region, and cost
-   assumptions. Ask the owner before `az deployment ... create`.
-5. Deploy to an approved non-production/staging environment first. Never run
-   infrastructure deployment or write/rotate production credentials without
-   explicit owner approval.
-6. Verify over HTTPS:
-   - GET /.well-known/openid-configuration returns the exact configured issuer,
-     expected endpoints, and S256 support.
-   - Public keys/JWKS are discoverable and contain no private key material.
-   - Dynamic registration rejects invalid redirects and unsupported grants.
-   - A test professor can complete authorization-code + PKCE, consent, token
-     exchange, and refresh. Do not echo tokens in logs or reports.
-   - The existing ProfessorAPI validates an OAuth token for the expected
-     audience/scope and rejects wrong issuer, audience, missing read scope,
-     expired tokens, and invalid signatures.
-   - MCP read/write authorization remains scope-gated; write tools require
-     explicit write scope.
-   - Existing website login and ProfessorAPI JWT endpoints still work when the
-     OAuth service is stopped or unavailable.
-   - Key Vault access denial produces a clear startup failure without a
-     development-key fallback.
-7. Only after owner approval, set the exact Azure issuer on the production API
-   and perform production verification without using real user credentials.
-8. Report created resources, configuration names (never secret values),
-   validation outcomes, costs/tiers, and any remaining manual tasks.
-
-Instructions to the implementing AI
------------------------------------
-- First inspect the current repository and relevant official Azure/OpenIddict
-  docs; do not assume the previous handoff is more current than source.
-- Implement the deployment-ready changes and Bicep, not just a proposal, unless
-  blocked by missing subscription/region/resource-name decisions.
-- Ask for required owner decisions before billable Azure resource creation.
-- Never reveal, copy, or request real passwords, PFX contents, tokens, publish
-  credentials, or database secrets in chat or committed files.
-- Never deploy to Azure or mutate production MySQL without explicit approval.
-- Preserve unrelated worktree changes. Use narrow tests/builds and report exact
-  results. Do not claim production OAuth works until its public end-to-end flow
-  and API token validation have both been verified.
-
-
-
-deploy all the azure service using the most possible basic resource, because this is a project just for my portfolio I dont want to waste a lot resource and money.
-But still prioritice that the API works correctly. 
+STEP 6 — IMPLEMENT MCP OAUTH DISCOVERY Your MCP server must publish
+OAuth Protected Resource Metadata (RFC 9728), and your authorization
+server must publish OAuth Authorization Server Metadata (RFC 8414) or
+OpenID Connect Discovery metadata.

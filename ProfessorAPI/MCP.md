@@ -27,6 +27,54 @@ MCP OAuth is optional on the API. If `McpOAuth__Issuer` is unset, the API still 
 
 Registered public clients are restricted to authorization-code + S256 PKCE and exact registered redirect URIs. Users see a consent screen before approving `classroom:read` and, optionally, `classroom:write`. Access tokens last 15 minutes and refresh tokens 30 days. The API validates the token signature, issuer, audience, scopes, and that `sub` still maps to an existing professor ID. The write scope enables MCP write tools.
 
+The consent page's Content Security Policy permits form submission to the
+authorization service and the origin of the validated client redirect URI.
+Browsers need the latter to follow the authorization response after consent.
+
+After consent, the OAuth service stores an authorization with its approved
+scopes. Users can review and revoke authorizations at the OAuth service's
+`/connect/authorizations` page using their existing professor credentials. The
+API checks the authorization status on every OAuth request; revoked grants
+cannot obtain refresh tokens or access MCP. Requests already in flight may
+complete. Legacy database-backed MCP tokens are unaffected.
+
+The OAuth service must be deployed before the API version that requires the
+`mcp_authorization_id` claim. Existing OAuth access and refresh tokens without
+that claim cannot be used with the updated API; affected clients must reconnect.
+This is necessary because older tokens cannot be linked reliably to a
+user-revocable authorization. The website login and legacy MCP tokens are
+independent.
+
+The OAuth server registers exactly the configured MCP resource with OpenIddict.
+Per-client resource permissions are ignored so existing client registrations
+remain usable; the registered-resource validation still rejects every other
+resource. Revisit this policy before adding additional resources.
+
+Client ID Metadata Documents (CIMD) are implemented behind the
+`McpOAuth__EnableCimd` setting, which defaults to false. Enable it only after
+the client-ID migration and coordinated OAuth/API deployment have completed.
+With CIMD disabled, discovery does not advertise it.
+The new client-ID schema migration is a prerequisite.
+It expands the indexed ID to 512 characters with a case-sensitive collation.
+Review the generated SQL, index limits, backup and rollback implications on the
+target MySQL server before applying it. Rolling back may fail or lose data if
+IDs exceed 100 characters or differ only by case.
+
+The CIMD metadata fetcher connects only to public IPv4
+addresses and does not follow redirects, so IPv6-only metadata hosts are not
+currently supported. The fetcher accepts clients declaring `none` in
+`token_endpoint_auth_methods_supported`, or, if that field is absent, declaring
+`token_endpoint_auth_method` as `none`. Discovery advertises `none` so clients
+that also support private-key authentication can select the public-client flow.
+Public `jwks_uri` metadata is accepted but never fetched or used; inline keys
+and shared secrets are rejected. Private-key client authentication is not
+implemented for CIMD clients. Client metadata is re-fetched for authorization requests;
+redirect URIs must match exactly. The client name is self-asserted; the consent
+page also shows the client identifier so users can verify its origin.
+
+Refresh tokens rotate without a reuse grace period. Clients must serialize
+refresh requests and save the newly issued refresh token.
+
 ### OAuth service production configuration
 
 Set these environment variables on `ProfessorOAuth`:
@@ -34,10 +82,14 @@ Set these environment variables on `ProfessorOAuth`:
 - `ConnectionStrings__MySQLConnection`: connection to the same MySQL database as the API.
 - `McpOAuth__Issuer`: the service's canonical public HTTPS URL.
 - `McpOAuth__ResourceUrl`: the API's canonical `/mcp` URL.
-- `OpenIddict__SigningCertificatePath` and `OpenIddict__SigningCertificatePassword`.
-- `OpenIddict__EncryptionCertificatePath` and `OpenIddict__EncryptionCertificatePassword`.
+- `KeyVault__VaultUri`, `KeyVault__SigningCertificateName`, and
+  `KeyVault__EncryptionCertificateName`.
+- `DataProtection__BlobContainerUri` and `DataProtection__KeyVaultKeyUri`.
 
-Keep private keys and passwords out of source control. The service currently loads PFX files from disk; Azure must securely mount or provision the PFX files and expose their passwords as app settings (direct Key Vault certificate loading is not implemented). Persist ASP.NET Core Data Protection keys for login cookies if the service will restart or scale across instances. Do not use the website's `JWTkey:key` as an OAuth signing key.
+Keep private keys and passwords out of source control. The Azure service loads
+the certificates from Key Vault using its managed identity and stores Data
+Protection keys in Blob Storage protected by a Key Vault key. Do not use the
+website's `JWTkey:key` as an OAuth signing key.
 
 The existing MySQL connection credential is shared with this service and must be rotated if exposed. The OAuth service is not ready for deployment until the actual Azure issuer URL, certificate storage, and its restricted database credentials are configured.
 
@@ -47,7 +99,7 @@ Existing database-backed MCP tokens remain supported independently of OAuth. The
 
 Apply [`Database/Migrations/001_CreateMcpAccessTokens.sql`](./Database/Migrations/001_CreateMcpAccessTokens.sql) and then [`Database/Migrations/002_AddMcpTokenAccessLevel.sql`](./Database/Migrations/002_AddMcpTokenAccessLevel.sql) to the same MySQL database used by the API before using legacy MCP token routes.
 
-The OpenIddict client, authorization, scope, and token tables are managed by EF Core in the `ProfessorOAuth` project. The existing migration was applied to the production database already. For a new database, install the matching EF CLI with `dotnet tool install --global dotnet-ef --version 8.0.30`, configure `ConnectionStrings__MySQLConnection`, then run `dotnet ef database update --project ProfessorOAuth/ProfessorOAuth.csproj`. Do not rerun this against production unless the migration state has first been checked.
+The OpenIddict client, authorization, scope, and token tables are managed by EF Core in the `ProfessorOAuth` project. The initial migration and client-ID expansion have been applied to the current production database. For a new database, install an EF CLI compatible with the project's EF Core 9 packages, configure `ConnectionStrings__MySQLConnection`, then run `dotnet ef database update --project ProfessorOAuth/ProfessorOAuth.csproj`. Do not run this against production without reviewing and approving pending migrations.
 
 ## Legacy token creation and revocation
 

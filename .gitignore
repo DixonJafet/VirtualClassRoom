@@ -502,3 +502,16 @@ publish/appsettings.json
 # App_Data directory containing local certificates or keys
 App_Data/
 **/App_Data/
+
+# Local environment files and OAuth configuration overrides
+.env
+.env.*
+!.env.example
+!.env.*.example
+ProfessorOAuth/appsettings.Development.json
+ProfessorOAuth/appsettings.Local.json
+
+# Private keys and certificate bundles
+*.key
+*.pem
+*.p12

@@ -17,7 +17,7 @@ namespace ProfessorOAuth.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.30")
+                .HasAnnotation("ProductVersion", "9.0.19")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -33,8 +33,9 @@ namespace ProfessorOAuth.Persistence.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<string>("ClientId")
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)")
+                        .UseCollation("utf8mb4_bin");
 
                     b.Property<string>("ClientSecret")
                         .HasColumnType("longtext");

@@ -159,6 +159,7 @@ public sealed class McpOAuthLoginController : ControllerBase
     {
         return !string.IsNullOrWhiteSpace(returnUrl) &&
             Url.IsLocalUrl(returnUrl) &&
-            returnUrl.StartsWith("/connect/authorize?", StringComparison.Ordinal);
+            (returnUrl.StartsWith("/connect/authorize?", StringComparison.Ordinal) ||
+             string.Equals(returnUrl, "/connect/authorizations", StringComparison.Ordinal));
     }
 }

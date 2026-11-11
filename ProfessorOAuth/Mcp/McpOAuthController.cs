@@ -20,28 +20,33 @@ public sealed class McpOAuthController : ControllerBase
 
     private readonly IConfiguration _configuration;
     private readonly IOpenIddictApplicationManager _applications;
+    private readonly IOpenIddictAuthorizationManager _authorizations;
     private readonly IAntiforgery _antiforgery;
     private readonly ILogger<McpOAuthController> _logger;
 
     public McpOAuthController(
         IConfiguration configuration,
         IOpenIddictApplicationManager applications,
+        IOpenIddictAuthorizationManager authorizations,
         IAntiforgery antiforgery,
         ILogger<McpOAuthController> logger)
     {
         _configuration = configuration;
         _applications = applications;
+        _authorizations = authorizations;
         _antiforgery = antiforgery;
         _logger = logger;
     }
 
     [HttpGet("~/connect/authorize")]
+    [EnableRateLimiting("McpAuthorization")]
     public Task<IActionResult> Authorize()
     {
         return ProcessAuthorizationAsync(consentSubmitted: false);
     }
 
     [HttpPost("~/connect/authorize")]
+    [EnableRateLimiting("McpAuthorization")]
     [Consumes("application/x-www-form-urlencoded")]
     [ValidateAntiForgeryToken]
     public Task<IActionResult> AuthorizePost()
@@ -56,6 +61,10 @@ public sealed class McpOAuthController : ControllerBase
         var authentication = await HttpContext.AuthenticateAsync(LoginCookieScheme);
         if (!authentication.Succeeded || authentication.Principal is null)
         {
+            if (consentSubmitted)
+            {
+                return Unauthorized("Your sign-in session expired. Restart authorization from your client.");
+            }
             var returnUrl = Request.PathBase + Request.Path + Request.QueryString;
             return Redirect("/api/profes/oauth/login?returnUrl=" + Uri.EscapeDataString(returnUrl));
         }
@@ -110,9 +119,26 @@ public sealed class McpOAuthController : ControllerBase
         var principal = new ClaimsPrincipal(identity);
         principal.SetScopes(requestedScopes);
         principal.SetResources(mcpResource);
+        var application = await _applications.FindByClientIdAsync(request.ClientId!)
+            ?? throw new InvalidOperationException("The validated OAuth client was not found.");
+        var applicationId = await _applications.GetIdAsync(application)
+            ?? throw new InvalidOperationException("The validated OAuth client has no identifier.");
+        var authorizationDescriptor = new OpenIddictAuthorizationDescriptor
+        {
+            ApplicationId = applicationId,
+            Subject = professorId,
+            Status = OpenIddictConstants.Statuses.Valid,
+            Type = OpenIddictConstants.AuthorizationTypes.Permanent
+        };
+        authorizationDescriptor.Scopes.UnionWith(requestedScopes);
+        var authorization = await _authorizations.CreateAsync(authorizationDescriptor);
+        var authorizationId = await _authorizations.GetIdAsync(authorization)
+            ?? throw new InvalidOperationException("The OAuth authorization has no identifier.");
+        principal.SetAuthorizationId(authorizationId);
+        identity.SetClaim("mcp_authorization_id", authorizationId);
         principal.SetDestinations(static claim => claim.Type switch
         {
-            OpenIddictConstants.Claims.Subject or "mcp_access" =>
+            OpenIddictConstants.Claims.Subject or "mcp_access" or "mcp_authorization_id" =>
                 [OpenIddictConstants.Destinations.AccessToken],
             OpenIddictConstants.Claims.Name when claim.Subject?.HasScope(OpenIddictConstants.Scopes.Profile) == true =>
                 [OpenIddictConstants.Destinations.AccessToken, OpenIddictConstants.Destinations.IdentityToken],
@@ -142,11 +168,31 @@ public sealed class McpOAuthController : ControllerBase
         {
             permissions.Add("Create or edit classrooms, evaluations, and grades");
         }
+        if (requestedScopes.Contains(OpenIddictConstants.Scopes.Profile, StringComparer.Ordinal))
+        {
+            permissions.Add("Read your name");
+        }
+        if (requestedScopes.Contains(OpenIddictConstants.Scopes.Email, StringComparer.Ordinal))
+        {
+            permissions.Add("Read your email address");
+        }
+        if (requestedScopes.Contains(OpenIddictConstants.Scopes.OfflineAccess, StringComparer.Ordinal))
+        {
+            permissions.Add("Maintain access when you are not signed in");
+        }
 
         var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-        var encodedAction = HtmlEncoder.Default.Encode(Request.PathBase + Request.Path + Request.QueryString);
+        var encodedAction = HtmlEncoder.Default.Encode(Request.PathBase + Request.Path);
         var encodedClientName = HtmlEncoder.Default.Encode(clientName);
+        var encodedClientId = HtmlEncoder.Default.Encode(request.ClientId ?? string.Empty);
         var encodedToken = HtmlEncoder.Default.Encode(tokens.RequestToken ?? string.Empty);
+        var requestFields = string.Join(
+            Environment.NewLine,
+            Request.Query
+                .Where(parameter => !string.Equals(parameter.Key, "consent", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(parameter.Key, "__RequestVerificationToken", StringComparison.OrdinalIgnoreCase))
+                .SelectMany(parameter => parameter.Value.Select(value =>
+                    $"<input type=\"hidden\" name=\"{HtmlEncoder.Default.Encode(parameter.Key)}\" value=\"{HtmlEncoder.Default.Encode(value ?? string.Empty)}\">")));
         var permissionItems = string.Join(
             Environment.NewLine,
             permissions.Select(permission => $"<li>{HtmlEncoder.Default.Encode(permission)}</li>"));
@@ -165,13 +211,16 @@ public sealed class McpOAuthController : ControllerBase
             <body>
               <main>
                 <h1>Authorize {{encodedClientName}}?</h1>
+                <p>Client identifier: {{encodedClientId}}</p>
                 <p>This client is requesting access to your MyClassRoom account:</p>
                 <ul>{{permissionItems}}</ul>
                 <form method="post" action="{{encodedAction}}">
                   <input type="hidden" name="__RequestVerificationToken" value="{{encodedToken}}">
+                  {{requestFields}}
                   <button type="submit" name="consent" value="approve">Allow</button>
                   <button type="submit" name="consent" value="deny">Deny</button>
                 </form>
+                <p><a href="/connect/authorizations">Manage authorized clients</a></p>
               </main>
             </body>
             </html>
@@ -180,8 +229,11 @@ public sealed class McpOAuthController : ControllerBase
         Response.Headers.CacheControl = "no-store";
         Response.Headers.Pragma = "no-cache";
         Response.Headers["Referrer-Policy"] = "no-referrer";
+        var redirectUri = new Uri(request.RedirectUri
+            ?? throw new InvalidOperationException("The validated OAuth redirect URI is unavailable."), UriKind.Absolute);
+        var redirectOrigin = redirectUri.GetLeftPart(UriPartial.Authority);
         Response.Headers["Content-Security-Policy"] =
-            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
+            $"default-src 'none'; style-src 'unsafe-inline'; form-action 'self' {redirectOrigin}; base-uri 'none'; frame-ancestors 'none'";
         return Content(html, "text/html; charset=utf-8");
     }
 

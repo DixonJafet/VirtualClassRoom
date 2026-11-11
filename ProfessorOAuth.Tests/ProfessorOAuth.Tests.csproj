@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ProfessorOAuth\ProfessorOAuth.csproj" />
+    <ProjectReference Include="..\ProfessorAPI\ProfessorAPI.csproj" Aliases="Api" />
   </ItemGroup>
 
   <ItemGroup>

@@ -3,7 +3,9 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ProfessorOAuth.Persistence;
@@ -16,6 +18,7 @@ public class OAuthEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
 
     public OAuthEndpointsIntegrationTests(WebApplicationFactory<Program> factory)
     {
+        var databaseName = "OpenIddictTests_" + Guid.NewGuid();
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Development");
@@ -27,9 +30,10 @@ public class OAuthEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
             {
                 // Replace EF Core with in-memory database for testing
                 services.RemoveAll<DbContextOptions<OpenIddictDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<OpenIddictDbContext>>();
                 services.AddDbContext<OpenIddictDbContext>(options =>
                 {
-                    options.UseInMemoryDatabase("OpenIddictTests_" + Guid.NewGuid());
+                    options.UseInMemoryDatabase(databaseName);
                     options.UseOpenIddict();
                 });
             });
@@ -66,6 +70,7 @@ public class OAuthEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
         Assert.True(root.TryGetProperty("token_endpoint", out var tokenEp));
         Assert.True(root.TryGetProperty("jwks_uri", out var jwksUri));
         Assert.True(root.TryGetProperty("registration_endpoint", out var regEp));
+        Assert.False(root.TryGetProperty("client_id_metadata_document_supported", out _));
 
         // Verify PKCE S256 is supported
         var codeChallengeMethods = root.GetProperty("code_challenge_methods_supported")
@@ -128,5 +133,55 @@ public class OAuthEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
         var response = await client.PostAsJsonAsync("/connect/register", invalidPayload);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("https://classroomapi.runasp.net/mcp", true)]
+    [InlineData("https://other.example/mcp", false)]
+    public async Task Authorization_ValidatesRegisteredResource(string resource, bool allowed)
+    {
+        using var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://test-oauth.azurewebsites.net/")
+        });
+        var registration = await client.PostAsJsonAsync("/connect/register", new
+        {
+            client_name = "Resource validation test",
+            redirect_uris = new[] { "https://client.example/callback" },
+            grant_types = new[] { "authorization_code" },
+            response_types = new[] { "code" },
+            token_endpoint_auth_method = "none"
+        });
+        var registrationBody = await registration.Content.ReadAsStringAsync();
+        Assert.True(registration.StatusCode == HttpStatusCode.Created,
+            $"Client registration returned {registration.StatusCode}: {registrationBody}");
+        using var registered = JsonDocument.Parse(registrationBody);
+        var clientId = registered.RootElement.GetProperty("client_id").GetString();
+        var url = QueryHelpers.AddQueryString("/connect/authorize", new Dictionary<string, string?>
+        {
+            ["client_id"] = clientId,
+            ["redirect_uri"] = "https://client.example/callback",
+            ["response_type"] = "code",
+            ["scope"] = "classroom:read",
+            ["resource"] = resource,
+            ["code_challenge"] = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+            ["code_challenge_method"] = "S256"
+        });
+
+        var response = await client.GetAsync(url);
+        if (allowed)
+        {
+            Assert.True(response.StatusCode == HttpStatusCode.Redirect,
+                $"Authorization returned {response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+            var location = response.Headers.Location;
+            Assert.NotNull(location);
+            Assert.StartsWith("/api/profes/oauth/login?", location.OriginalString);
+        }
+        else
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Contains("error:invalid_target", await response.Content.ReadAsStringAsync());
+        }
     }
 }

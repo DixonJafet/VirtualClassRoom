@@ -15,17 +15,20 @@ public sealed class McpTokenAuthenticationHandler : AuthenticationHandler<Authen
     private const string OpenIddictValidationScheme = "OpenIddict.Validation.AspNetCore";
     private readonly MySqlConnection _connection;
     private readonly IConfiguration _configuration;
+    private readonly IMcpOAuthAuthorizationStore _authorizations;
 
     public McpTokenAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
         MySqlConnection connection,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IMcpOAuthAuthorizationStore authorizations)
         : base(options, logger, encoder)
     {
         _connection = connection;
         _configuration = configuration;
+        _authorizations = authorizations;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -61,30 +64,24 @@ public sealed class McpTokenAuthenticationHandler : AuthenticationHandler<Authen
             var writeScope = _configuration["McpOAuth:WriteScope"] ?? "classroom:write";
             var scopes = principal.GetScopes();
             var subject = principal.GetClaim(OpenIddictConstants.Claims.Subject);
+            var authorizationId = principal.GetClaim("mcp_authorization_id");
             if (string.IsNullOrWhiteSpace(subject) ||
-                !scopes.Contains(readScope, StringComparer.Ordinal))
+                string.IsNullOrWhiteSpace(authorizationId) || authorizationId.Length > 255)
             {
-                return AuthenticateResult.Fail("The OAuth token is missing the required MCP identity or read scope.");
+                return AuthenticateResult.Fail("The OAuth token is missing the required MCP identity or authorization.");
             }
 
-            var professor = await _connection.QuerySingleOrDefaultAsync<ProfessorIdentity>(
-                """
-                SELECT professor_id AS ProfessorId
-                FROM professors
-                WHERE professor_id = @subject
-                LIMIT 1
-                """,
-                new { subject });
-            if (string.IsNullOrWhiteSpace(professor?.ProfessorId))
+            var professorId = await _authorizations.FindActiveProfessorAsync(subject, authorizationId);
+            if (string.IsNullOrWhiteSpace(professorId))
             {
-                return AuthenticateResult.Fail("The OAuth subject is not linked to a professor account.");
+                return AuthenticateResult.Fail("The OAuth authorization is invalid or no longer active.");
             }
 
-            var claims = new List<Claim>
+            var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, professorId) };
+            if (scopes.Contains(readScope, StringComparer.Ordinal))
             {
-                new(ClaimTypes.NameIdentifier, professor.ProfessorId),
-                new("mcp_access", "read")
-            };
+                claims.Add(new Claim("mcp_access", "read"));
+            }
             if (scopes.Contains(writeScope, StringComparer.Ordinal))
             {
                 claims.Add(new Claim("mcp_access", "write"));
@@ -145,5 +142,4 @@ public sealed class McpTokenAuthenticationHandler : AuthenticationHandler<Authen
     }
 
     private sealed record McpTokenAccess(string ProfessorId, string AccessLevel);
-    private sealed record ProfessorIdentity(string ProfessorId);
 }

@@ -12,12 +12,18 @@ using OpenIddict.Server.AspNetCore;
 using ProfessorOAuth.Certificates;
 using ProfessorOAuth.Configuration;
 using ProfessorOAuth.Health;
+using ProfessorOAuth.Mcp;
 using ProfessorOAuth.Persistence;
 using ProfessorOAuth.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllersWithViews();
+var enableCimd = builder.Configuration.GetValue<bool>("McpOAuth:EnableCimd");
+if (enableCimd)
+{
+    builder.Services.AddSingleton(new CimdMetadataFetcher(CimdMetadataFetcher.CreateHttpClient()));
+}
 
 var connectionString = builder.Configuration.GetConnectionString("MySQLConnection")
     ?? builder.Configuration.GetConnectionString("MySQLConnnection")
@@ -101,6 +107,16 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0,
                 AutoReplenishment = true
             }));
+    options.AddPolicy("McpAuthorization", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
 });
 
 // Configure Key Vault options and certificate provider
@@ -140,6 +156,9 @@ builder.Services.AddOpenIddict()
         options.AllowAuthorizationCodeFlow()
             .AllowRefreshTokenFlow()
             .RequireProofKeyForCodeExchange();
+        options.RegisterResources(resourceUri);
+        // All clients may use the one registered MCP resource, including existing registrations.
+        options.IgnoreResourcePermissions();
         options.RegisterScopes(
             OpenIddictConstants.Scopes.OpenId,
             OpenIddictConstants.Scopes.Profile,
@@ -158,10 +177,23 @@ builder.Services.AddOpenIddict()
             {
                 context.Metadata["registration_endpoint"] =
                     new Uri(issuerUri, "connect/register").AbsoluteUri;
+                if (enableCimd)
+                {
+                    context.Metadata["client_id_metadata_document_supported"] = true;
+                    context.TokenEndpointAuthenticationMethods.Clear();
+                    context.TokenEndpointAuthenticationMethods.Add("none");
+                }
                 return ValueTask.CompletedTask;
             }).SetOrder(int.MaxValue));
+        if (enableCimd)
+        {
+            options.AddEventHandler<OpenIddictServerEvents.ValidateAuthorizationRequestContext>(handler =>
+                handler.UseScopedHandler<CimdAuthorizationHandler>()
+                    .SetOrder(OpenIddictServerHandlers.Authentication.ValidateAuthentication.Descriptor.Order - 500));
+        }
         options.SetAccessTokenLifetime(TimeSpan.FromMinutes(15))
             .SetRefreshTokenLifetime(TimeSpan.FromDays(30))
+            .SetRefreshTokenReuseLeeway(TimeSpan.Zero)
             .DisableAccessTokenEncryption();
 
         if (loadedCertificates is not null)
