@@ -23,7 +23,7 @@ namespace ProfessorAPI.Interface
 
         Task<IEnumerable<ClassRoom>> getAllProfessorClassRooms(Professor professor);
 
-        Task<ClassRoom> getClassRoom(string professor_id, string classroomCode);
+        Task<ClassRoom?> getClassRoom(string professor_id, string classroomCode);
 
         Task<ClassRoom> editClassRoom(string professor_id, string classCode, ClassRoom classroom);
 
@@ -42,7 +42,7 @@ namespace ProfessorAPI.Interface
     
         Task<Evaluation> EditEvaluation(string professor_id, string classroomCode, Evaluation evaluation, string prev_title);
 
-        Task<Evaluation> GetEvaluation(string professor_id, string classCode, string evaluation_title);
+        Task<Evaluation?> GetEvaluation(string professor_id, string classCode, string evaluation_title);
 
         Task<Grade?> GetGrade(string professor_id, string classCode, string student_name, string evaluation_title);
 

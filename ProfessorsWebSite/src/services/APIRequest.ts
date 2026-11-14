@@ -59,7 +59,6 @@ export async function GETAllGradesInfo(classroomCode: string): Promise<DynamicOb
     try {
     const response = await fetch(`${API_BASE_URL}/api/profes/ClassRoomEvaluation/${classroomCode}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
       credentials: "include",
     });
 
@@ -81,7 +80,6 @@ export async function GETClassRoomEvaluationMaxima(
       `${API_BASE_URL}/api/profes/ClassRoomEvaluationMaxima/${encodeURIComponent(classroomCode)}`,
       {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       }
     );
@@ -126,7 +124,6 @@ export async function GETEvaluationInfo(classRoomCode: string, evaluationTitle: 
       `${API_BASE_URL}/api/profes/getEvaluation/${encodeURIComponent(classRoomCode)}/${encodeURIComponent(evaluationTitle)}`,
       {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
         credentials: "include",
       }
     );
@@ -212,7 +209,6 @@ export async function GETAllClassRooms(professor: string): Promise<ClassRoom[]> 
   try {
     const response = await fetch(`${API_BASE_URL}/api/profes/ClassRooms`,{
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
       credentials: "include",
     });
 
@@ -246,7 +242,6 @@ export async function GETClassRoomsInfo(classroomCode: string): Promise<ClassRoo
   try{
     const response = await fetch(`${API_BASE_URL}/api/profes/edit/${classroomCode}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
       credentials: "include",
     });
     

@@ -27,7 +27,10 @@ export function EvaluationPage() {
     let cancelled = false;
 
     async function loadClassroomData(): Promise<void> {
-      const rawData = await GETAllGradesInfo(classroomCode as string);
+      const [rawData, maxima] = await Promise.all([
+        GETAllGradesInfo(classroomCode as string),
+        GETClassRoomEvaluationMaxima(classroomCode as string),
+      ]);
       if (cancelled) return;
 
       const rows = rawData.map((item: DynamicObject) => {
@@ -43,9 +46,6 @@ export function EvaluationPage() {
       const evaluationTitles = Object.keys(rows[0] ?? {}).filter(
         key => key.toLowerCase() !== 'name' && key.toLowerCase() !== 'total'
       );
-      const maxima = await GETClassRoomEvaluationMaxima(classroomCode as string);
-      if (cancelled) return;
-
       setEvaluationMaxima(maxima ?? {});
       setPercentageError(maxima === null || evaluationTitles.some(title => maxima[title] === undefined));
       updateCardData(rows);

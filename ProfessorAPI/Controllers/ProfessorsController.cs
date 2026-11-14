@@ -164,64 +164,57 @@ namespace ProfessorAPI.Controllers
 
         public async Task<IEnumerable<ClassRoom>> getAllProfessorClassRooms(Professor professor)
         {
-
-            var DB = getdbConnection();
-            var query = @"CALL GetProfessorClassrooms(@professor_id)";
-            var classrooms = await DB.QueryAsync<ClassRoom>(query, new { professor.professor_id });
-            foreach (var prev_classroom in classrooms)
+            var professorId = professor.professor_id
+                ?? throw new ArgumentException("Professor ID is required.", nameof(professor));
+            var classrooms = await GetClassroomsWithSchedules(professorId, null);
+            foreach (var classroom in classrooms)
             {
-                try
+                var parts = classroom.about?.Split("00_PAPI_");
+                if (parts == null)
                 {
-                    if (prev_classroom?.about?.Split("00_PAPI_")[1] != null) {
-                        prev_classroom.about = prev_classroom?.about?.Split("00_PAPI_")[1];
-                    }
-                    else
-                    {
-                        prev_classroom.about = "";
-                    }
-                    
+                    classroom.about = "";
                 }
-                catch { }
+                else if (parts.Length > 1)
+                {
+                    classroom.about = parts[1];
+                }
             }
-            //  lia newClassrooms = classrooms.ToList<ClassRoom>();
-            var classroomsWithSchedule = classrooms.Select(
-                    classroom =>
-                    {
-                        var query = @"CALL GetClassroomSchedules(@classroomCode);";
-                        var result =  DB.QueryAsync<Schedule>(query, new { classroom.classroomCode }).Result;
-                        return new ClassRoom
-                        {
-                            classroomCode = classroom.classroomCode,
-                            courseName = classroom.courseName,
-                            about = classroom.about,
-                            schedule = result
-                        };
-                    }             
-            );
-            return classroomsWithSchedule;
+            return classrooms;
         }
 
 
-        public async Task<ClassRoom> getClassRoom(string professor_id, string classroomCode)
+        public async Task<ClassRoom?> getClassRoom(string professor_id, string classroomCode)
         {
-            var DB = getdbConnection();
-            var query = @"Select courseName,classroomCode,about from classrooms where professor_id = @professor_id and classroomCode = @classroomCode";
-            var result = await DB.QueryFirstOrDefaultAsync<ClassRoom>(query, new{
-                                                                                    professor_id,
-                                                                                    classroomCode
-                                                                                });
+            var classrooms = await GetClassroomsWithSchedules(professor_id, classroomCode);
+            var result = classrooms.FirstOrDefault();
 
             if (result == null) return null;
 
-            var schedule_query = @"CALL GetClassroomSchedules(@classroomCode);";
-            var schedule_result =  await DB.QueryAsync<Schedule>(schedule_query, new { classroomCode });
-           // Console.WriteLine(schedule_result);
-
-            result.schedule = schedule_result;
-
-            result.about = FileController.getFileName(result?.about);
+            result.about = FileController.getFileName(result.about);
             return result;
 
+        }
+
+        private async Task<List<ClassRoom>> GetClassroomsWithSchedules(string professorId, string? classroomCode)
+        {
+            using var results = await getdbConnection().QueryMultipleAsync(
+                "CALL GetClassroomsWithSchedules(@professorId, @classroomCode)",
+                new { professorId, classroomCode });
+            var classrooms = (await results.ReadAsync<ClassRoom>()).AsList();
+            var schedules = (await results.ReadAsync<ClassroomSchedule>()).ToLookup(
+                schedule => schedule.classroomCode);
+
+            foreach (var classroom in classrooms)
+            {
+                classroom.schedule = schedules[classroom.classroomCode].ToArray();
+            }
+
+            return classrooms;
+        }
+
+        private sealed class ClassroomSchedule : Schedule
+        {
+            public string? classroomCode { get; set; }
         }
 
         public async Task<ClassRoom> editClassRoom(string professor_id, string classroomCode, ClassRoom classroom)
@@ -472,10 +465,16 @@ namespace ProfessorAPI.Controllers
             return result;
         }
 
-        public async Task<Evaluation> GetEvaluation(string professor_id, string classCode, string evaluation_title)
+        public async Task<Evaluation?> GetEvaluation(string professor_id, string classCode, string evaluation_title)
         {
             var DB = getdbConnection();
-            var query = @"CALL GetEvaluationInfo(@professor_id,@classCode,@evaluation_title)";
+            var query = @"
+                SELECT e.*
+                FROM evaluations e
+                INNER JOIN classrooms c ON c.classroom_id = e.classroom_id
+                WHERE c.professor_id = @professor_id
+                  AND c.classroomCode = @classCode
+                  AND e.title = @evaluation_title";
 
             var evaluation = await DB.QueryFirstOrDefaultAsync<Evaluation>(query, new
             {
@@ -483,6 +482,8 @@ namespace ProfessorAPI.Controllers
                 classCode,
                 professor_id
             });
+
+            if (evaluation == null) return null;
 
             evaluation.rubric = FileController.getFileName(evaluation.rubric);
             evaluation.statement = FileController.getFileName(evaluation.statement);
