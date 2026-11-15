@@ -392,36 +392,29 @@ namespace ProfessorAPI.Controllers
         }
 
         public async Task<bool> CreateEvaluation(string professor_id,string classroomCode,Evaluation evaluation)
-                    {
-
-                string statement = await FileHandler.CreateFileLink(evaluation.statementFile, classroomCode);
-                string rubric = await FileHandler.CreateFileLink(evaluation.rubricFile, classroomCode);
-
-                var DB = getdbConnection();
-                        var query = @"CALL CreateEvaluation(
-                                    @professor_id,
-                                    @classroomCode,
-                                    @Title,
-                                    @Value,
-                                    @DueDate,
-                                    @Subject,
-                                    @Statement,
-                                    @Rubric
-                                )";
-
-                        var result = await DB.ExecuteAsync(query, new
-                        {
-                            professor_id,
-                            classroomCode,
-                            evaluation.title,
-                            evaluation.value,
-                            evaluation.dueDate,
-                            evaluation.subject,
-                            statement,
-                            rubric
-                        });
-
-
+        {
+            ValidateEvaluation(evaluation);
+            var db = getdbConnection();
+            await db.OpenAsync();
+            using var transaction = await db.BeginTransactionAsync();
+            var classroomId = await LockClassroom(db, transaction, professor_id, classroomCode);
+            var totalWeight = await db.ExecuteScalarAsync<decimal>(
+                "SELECT COALESCE(SUM(value), 0) FROM evaluations WHERE classroom_id = @classroomId",
+                new { classroomId }, transaction);
+            if (totalWeight + (decimal)evaluation.value > 100m)
+                throw new BadHttpRequestException("Evaluation weights cannot exceed 100%.");
+            var exists = await db.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM evaluations WHERE classroom_id = @classroomId AND title = @title",
+                new { classroomId, evaluation.title }, transaction);
+            if (exists != 0) throw new BadHttpRequestException("An evaluation with this title already exists.");
+            string statement = await FileHandler.CreateFileLink(evaluation.statementFile, classroomCode);
+            string rubric = await FileHandler.CreateFileLink(evaluation.rubricFile, classroomCode);
+            var result = await db.ExecuteAsync(
+                @"INSERT INTO evaluations (classroom_id, title, value, DueDate, subject, statement, rubric)
+                  VALUES (@classroomId, @title, @value, @dueDate, @subject, @statement, @rubric)",
+                new { classroomId, evaluation.title, evaluation.value,
+                      evaluation.dueDate, evaluation.subject, statement, rubric }, transaction);
+            await transaction.CommitAsync();
             return result > 0;
         }
 
@@ -429,47 +422,69 @@ namespace ProfessorAPI.Controllers
         public async Task<Evaluation> EditEvaluation(string professor_id, string classroomCode, Evaluation evaluation,string prev_title)
         {
 
-            string statement = await FileHandler.CreateFileLink(evaluation.statementFile, classroomCode);
-            string rubric = await FileHandler.CreateFileLink(evaluation.rubricFile, classroomCode);
+            ValidateEvaluation(evaluation);
+            var db = getdbConnection();
+            await db.OpenAsync();
+            using var transaction = await db.BeginTransactionAsync();
+            var classroomId = await LockClassroom(db, transaction, professor_id, classroomCode);
+            var current = await db.QuerySingleOrDefaultAsync<Evaluation>(
+                @"SELECT evaluation_id, statement, rubric FROM evaluations
+                  WHERE classroom_id = @classroomId AND title = @prev_title",
+                new { classroomId, prev_title }, transaction);
+            if (current == null) throw new BadHttpRequestException("Evaluation not found.", 404);
+            var totalWeight = await db.ExecuteScalarAsync<decimal>(
+                "SELECT COALESCE(SUM(value), 0) FROM evaluations WHERE classroom_id = @classroomId AND evaluation_id <> @id",
+                new { classroomId, id = current.evaluation_id }, transaction);
+            if (totalWeight + (decimal)evaluation.value > 100m)
+                throw new BadHttpRequestException("Evaluation weights cannot exceed 100%.");
+            var duplicate = await db.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM evaluations WHERE classroom_id = @classroomId AND title = @title AND evaluation_id <> @id",
+                new { classroomId, evaluation.title, id = current.evaluation_id }, transaction);
+            if (duplicate != 0) throw new BadHttpRequestException("An evaluation with this title already exists.");
+            var highestGrade = await db.ExecuteScalarAsync<decimal?>(
+                "SELECT MAX(grade) FROM grades WHERE evaluation_id = @id", new { id = current.evaluation_id }, transaction);
+            if (highestGrade > (decimal)evaluation.value)
+                throw new BadHttpRequestException("Evaluation value cannot be lower than an existing grade.");
+            var statement = evaluation.statementFile == null || evaluation.statementFile.Length == 0
+                ? current.statement : await FileHandler.CreateFileLink(evaluation.statementFile, classroomCode);
+            var rubric = evaluation.rubricFile == null || evaluation.rubricFile.Length == 0
+                ? current.rubric : await FileHandler.CreateFileLink(evaluation.rubricFile, classroomCode);
+            await db.ExecuteAsync(
+                @"UPDATE evaluations SET title=@title, value=@value,
+                  DueDate=@dueDate, subject=@subject, statement=@statement, rubric=@rubric
+                  WHERE evaluation_id=@id",
+                new { evaluation.title, evaluation.value, evaluation.dueDate,
+                      evaluation.subject, statement, rubric, id = current.evaluation_id }, transaction);
+            await transaction.CommitAsync();
+            if (statement != current.statement && !string.IsNullOrEmpty(current.statement))
+                await FileHandler.DeleteFile(current.statement);
+            if (rubric != current.rubric && !string.IsNullOrEmpty(current.rubric))
+                await FileHandler.DeleteFile(current.rubric);
+            return evaluation;
+        }
 
-            var DB = getdbConnection();
-            var query = @"CALL EDITEvaluationInfo(
-        
-                            @professor_id,
-                            @classroomCode,
-                            @title,
-                            @value,
-                            @dueDate,
-                            @subject,
-                            @statement,
-                            @rubric,
-                            @prev_title
-                        )";
+        private static void ValidateEvaluation(Evaluation evaluation)
+        {
+            if (string.IsNullOrWhiteSpace(evaluation.title) ||
+                !float.IsFinite(evaluation.value) || evaluation.value < 0 || evaluation.value > 100 ||
+                Math.Round((decimal)evaluation.value, 2) != (decimal)evaluation.value)
+                throw new BadHttpRequestException("Enter an evaluation value from 0 to 100, with at most two decimal places.");
+        }
 
-            var result = await DB.QueryFirstOrDefaultAsync<Evaluation>(query, new
-            {
-                professor_id,
-                classroomCode,
-                evaluation.title,
-                evaluation.value,
-                evaluation.dueDate,
-                evaluation.subject,
-                statement,
-                rubric,
-                prev_title
-            });
-
-            FileHandler?.DeleteFile(result.rubric);
-            FileHandler?.DeleteFile(result.statement);
-
-            return result;
+        private static async Task<int> LockClassroom(MySqlConnection db, System.Data.IDbTransaction transaction, string professorId, string classroomCode)
+        {
+            var id = await db.QuerySingleOrDefaultAsync<int?>(
+                "SELECT classroom_id FROM classrooms WHERE professor_id=@professorId AND classroomCode=@classroomCode FOR UPDATE",
+                new { professorId, classroomCode }, transaction);
+            return id ?? throw new BadHttpRequestException("Classroom not found.", 404);
         }
 
         public async Task<Evaluation?> GetEvaluation(string professor_id, string classCode, string evaluation_title)
         {
             var DB = getdbConnection();
             var query = @"
-                SELECT e.*
+                SELECT e.evaluation_id, e.title, e.value,
+                       e.dueDate, e.subject, e.statement, e.rubric
                 FROM evaluations e
                 INNER JOIN classrooms c ON c.classroom_id = e.classroom_id
                 WHERE c.professor_id = @professor_id
@@ -511,10 +526,20 @@ namespace ProfessorAPI.Controllers
 
         public async Task<Grade?> EditGrade(string professor_id, string classCode, string student_name, string evaluation_title, Grade grade)
         {
+            var DB = getdbConnection();
+            await DB.OpenAsync();
+            using var transaction = await DB.BeginTransactionAsync();
+            await LockClassroom(DB, transaction, professor_id, classCode);
+            var maxPoints = await DB.ExecuteScalarAsync<decimal?>(
+                @"SELECT e.value FROM evaluations e JOIN classrooms c ON c.classroom_id=e.classroom_id
+                  WHERE c.professor_id=@professor_id AND c.classroomCode=@classCode AND e.title=@evaluation_title",
+                new { professor_id, classCode, evaluation_title }, transaction);
+            if (maxPoints == null) throw new BadHttpRequestException("Evaluation not found.", 404);
+            if (grade.grade is not null && (!float.IsFinite(grade.grade.Value) || grade.grade < 0 || (decimal)grade.grade > maxPoints))
+                throw new BadHttpRequestException("Grade must be between zero and the evaluation maximum.");
 
             string feedback = await FileHandler.CreateFileLink(grade.feedbackFile, classCode);
            
-            var DB = getdbConnection();
             var query = @"CALL EditGradeInfo(@professor_id, @classCode, @student_name, @evaluation_title, @grade, @feedback)";
             var result = await DB.QueryFirstOrDefaultAsync<Grade>(query, new
             {
@@ -524,8 +549,9 @@ namespace ProfessorAPI.Controllers
                 evaluation_title,
                 grade.grade,
                 feedback
-            });
+            }, transaction);
             if (result == null) return null;
+            await transaction.CommitAsync();
 
             if (!string.IsNullOrEmpty(result.feedback))
             {

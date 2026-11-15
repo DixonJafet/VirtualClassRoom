@@ -22,15 +22,14 @@ export async function NEWEvaluationInfo(data: FormData, classroomCode: string): 
   try {
     const response = await fetch(`${API_BASE_URL}/api/profes/createEvaluation/${encodeURIComponent(classroomCode)}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       credentials: "include",
       body: data,
     });
 
     if (!response.ok) throw new Error('Failed to create evaluation');
-    const result = await response.json();
     return "success";
   } catch (error) {
+    console.error('Error creating evaluation:', error);
     return "error";
   }
 }
@@ -91,7 +90,7 @@ export async function GETClassRoomEvaluationMaxima(
     const evaluations: Array<{ title?: string; value?: number }> = await response.json();
     return Object.fromEntries(
       evaluations
-        .filter(evaluation => evaluation.title && Number.isFinite(Number(evaluation.value)) && Number(evaluation.value) > 0)
+        .filter(evaluation => evaluation.title && evaluation.value != null && Number.isFinite(Number(evaluation.value)) && Number(evaluation.value) >= 0 && Number(evaluation.value) <= 100)
         .map(evaluation => [evaluation.title as string, Number(evaluation.value)])
     );
   } catch (error) {
@@ -152,6 +151,7 @@ export async function EDITEvaluationInfo(data: FormData ,classRoomCode: string,e
     await response.json();
     return "success";
   } catch (error) {
+    console.error('Error editing evaluation:', error);
     return "error";
   }
 }

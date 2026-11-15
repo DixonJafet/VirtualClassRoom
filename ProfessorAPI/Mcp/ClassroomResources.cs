@@ -72,7 +72,7 @@ public sealed class ClassroomResources
 
         var evaluations = await connection.QueryAsync(
             """
-            SELECT c.classroomCode, c.courseName, e.title, e.value AS maxPoints, e.dueDate
+            SELECT c.classroomCode, c.courseName, e.title, e.value AS weight, e.dueDate
             FROM evaluations e
             INNER JOIN classrooms c ON c.classroom_id = e.classroom_id
             WHERE c.classroomCode = @classroomCode AND c.professor_id = @professorId

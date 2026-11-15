@@ -16,8 +16,8 @@ public sealed class AnalyticsPrompts
 
             Antes de concluir:
             - Usa las herramientas MCP de análisis disponibles y solo consulta datos de esta aula.
-            - Interpreta cada nota como porcentaje de su propio valor máximo; para promedios, pondera sumando puntos obtenidos y máximos.
-            - Distingue puntos porcentuales de puntos de calificación.
+            - Cada nota representa su contribución porcentual al curso; suma las notas de las evaluaciones incluidas.
+            - Expresa las notas como porcentajes del curso.
             - Explica qué evaluaciones se incluyeron y cualquier limitación de los datos.
             - No infieras que una nota cero está pendiente: el sistema no distingue ceros reales de placeholders.
             - No inventes datos que no devuelvan las herramientas.
@@ -34,7 +34,7 @@ public sealed class AnalyticsPrompts
             En el aula {classroomCode}, identifica los {limit} estudiantes en la posición {direction}.
             Usa la herramienta rank_students con direction="{direction}" y limit={limit}.
             Si no se especifica una evaluación, el ranking incluye evaluaciones cuya fecha de entrega ya llegó.
-            Explica el porcentaje normalizado y las evaluaciones incluidas. Informa empates y limitaciones.
+            Explica la contribución al curso y las evaluaciones incluidas. Informa empates y limitaciones.
             Nunca interpretes automáticamente un cero como calificación pendiente o como calificación revisada.
             """;
     }

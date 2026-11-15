@@ -67,7 +67,8 @@ public sealed class AnalyticsTools
             {
                 student = GetStudentName(row),
                 score,
-                percent = score / maxPoints * 100m
+                percent = score,
+                relativeToEvaluationPercent = maxPoints == 0m ? (decimal?)null : score / maxPoints * 100m
             };
         }).ToArray();
         var highestScore = scores.Length == 0 ? 0m : scores.Max(score => score.score);
@@ -76,9 +77,9 @@ public sealed class AnalyticsTools
         {
             classroomCode,
             evaluation = evaluationTitle,
-            maxPoints,
+            maxPercent = maxPoints,
             highestScore,
-            highestScorePercent = highestScore / maxPoints * 100m,
+            highestScorePercent = highestScore,
             averagePercent = scores.Length == 0 ? 0m : scores.Average(score => score.percent),
             students = scores
                 .Select(score => new
@@ -86,6 +87,7 @@ public sealed class AnalyticsTools
                     score.student,
                     score.score,
                     score.percent,
+                    score.relativeToEvaluationPercent,
                     relativeToHighestPercent = highestScore == 0m ? (decimal?)null : score.score / highestScore * 100m,
                     gapFromHighestPoints = highestScore - score.score
                 })
@@ -93,13 +95,14 @@ public sealed class AnalyticsTools
                 .ThenBy(score => score.student, StringComparer.OrdinalIgnoreCase),
             distribution = new
             {
-                below50 = scores.Count(score => score.percent < 50m),
-                from50ToBelow68 = scores.Count(score => score.percent >= 50m && score.percent < 68m),
-                from68ToBelow80 = scores.Count(score => score.percent >= 68m && score.percent < 80m),
-                from80ToBelow90 = scores.Count(score => score.percent >= 80m && score.percent < 90m),
-                from90To100 = scores.Count(score => score.percent >= 90m && score.percent <= 100m),
-                above100 = scores.Count(score => score.percent > 100m)
+                below50 = scores.Count(score => score.relativeToEvaluationPercent < 50m),
+                from50ToBelow68 = scores.Count(score => score.relativeToEvaluationPercent >= 50m && score.relativeToEvaluationPercent < 68m),
+                from68ToBelow80 = scores.Count(score => score.relativeToEvaluationPercent >= 68m && score.relativeToEvaluationPercent < 80m),
+                from80ToBelow90 = scores.Count(score => score.relativeToEvaluationPercent >= 80m && score.relativeToEvaluationPercent < 90m),
+                from90To100 = scores.Count(score => score.relativeToEvaluationPercent >= 90m && score.relativeToEvaluationPercent <= 100m),
+                above100 = scores.Count(score => score.relativeToEvaluationPercent > 100m)
             },
+            distributionBasis = "porcentaje relativo al valor de la evaluación",
             dataLimitation = DataLimitation
         };
 
@@ -116,7 +119,7 @@ public sealed class AnalyticsTools
     }
 
     [McpServerTool(Name = "rank_students")]
-    [Description("Obtiene los mejores o peores estudiantes de un aula, por promedio normalizado de evaluaciones vencidas o por una evaluación concreta.")]
+    [Description("Obtiene los mejores o peores estudiantes por contribución al curso de evaluaciones vencidas o una evaluación concreta.")]
     public async Task<string> RankStudentsAsync(
         [Description("Código del aula")] string classroomCode,
         [Description("Usa 'top' para los mejores o 'bottom' para los peores")] string direction = "bottom",
@@ -135,6 +138,7 @@ public sealed class AnalyticsTools
             ? context.Evaluations.Where(evaluation => evaluation.DueDate?.Date <= DateTime.UtcNow.Date).ToArray()
             : new[] { GetUniqueEvaluation(context.Evaluations, evaluationTitle) };
         var maxPoints = evaluations.Sum(RequireMaxPoints);
+        var availableWeight = maxPoints;
 
         var rankedStudents = context.Grades.Select(row =>
         {
@@ -142,16 +146,14 @@ public sealed class AnalyticsTools
             return new
             {
                 student = GetStudentName(row),
-                earnedPoints,
-                maxPoints,
-                percent = maxPoints == 0m ? 0m : earnedPoints / maxPoints * 100m,
+                percent = earnedPoints,
                 evaluationsIncluded = evaluations.Length
             };
         });
         var ranked = direction.Equals("top", StringComparison.OrdinalIgnoreCase)
             ? rankedStudents.OrderByDescending(student => student.percent)
             : rankedStudents.OrderBy(student => student.percent);
-        var students = maxPoints == 0m
+        var students = evaluations.Length == 0
             ? Array.Empty<object>()
             : ranked
                 .ThenBy(student => student.student, StringComparer.OrdinalIgnoreCase)
@@ -165,12 +167,13 @@ public sealed class AnalyticsTools
             ranking = direction.ToLowerInvariant(),
             evaluation = evaluationTitle,
             calculation = evaluationTitle is null
-                ? "suma de puntos / suma de valores máximos de evaluaciones con fecha de entrega hasta hoy"
-                : "puntos obtenidos / valor máximo de la evaluación",
+                ? "suma de porcentajes obtenidos en evaluaciones vencidas"
+                : "porcentaje obtenido en la evaluación",
+            availableWeight,
             evaluationsIncluded = evaluations.Select(evaluation => new
             {
                 evaluation.Title,
-                maxPoints = evaluation.MaxPoints,
+                value = evaluation.MaxPoints,
                 evaluation.DueDate
             }),
             students,
@@ -195,8 +198,8 @@ public sealed class AnalyticsTools
         {
             var firstScore = GetScore(row, firstEvaluationTitle);
             var secondScore = GetScore(row, secondEvaluationTitle);
-            var firstPercent = firstScore / firstMax * 100m;
-            var secondPercent = secondScore / secondMax * 100m;
+            var firstPercent = firstMax == 0m ? 0m : firstScore / firstMax * 100m;
+            var secondPercent = secondMax == 0m ? 0m : secondScore / secondMax * 100m;
 
             return new
             {
@@ -242,7 +245,7 @@ public sealed class AnalyticsTools
         using var connection = CreateConnection();
         var evaluations = await connection.QueryAsync(
             """
-            SELECT c.classroomCode, c.courseName, e.title, e.value AS maxPoints, e.dueDate
+            SELECT c.classroomCode, c.courseName, e.title, e.value AS weight, e.dueDate
             FROM evaluations e
             INNER JOIN classrooms c ON c.classroom_id = e.classroom_id
             WHERE c.professor_id = @professorId
@@ -262,7 +265,7 @@ public sealed class AnalyticsTools
     }
 
     [McpServerTool(Name = "find_students_by_grade_range")]
-    [Description("Busca estudiantes dentro de un rango porcentual, para una evaluación o el promedio normalizado de evaluaciones vencidas.")]
+    [Description("Busca estudiantes por contribución porcentual al curso de una evaluación o de evaluaciones vencidas.")]
     public async Task<string> FindStudentsByGradeRangeAsync(
         [Description("Código del aula")] string classroomCode,
         [Description("Porcentaje mínimo (0-100)")] decimal minimumPercent,
@@ -284,7 +287,7 @@ public sealed class AnalyticsTools
             : new[] { GetUniqueEvaluation(context.Evaluations, evaluationTitle) };
         var possiblePoints = evaluations.Sum(RequireMaxPoints);
 
-        var students = possiblePoints == 0m
+        var students = evaluations.Length == 0
             ? Array.Empty<object>()
             : context.Grades
                 .Select(row =>
@@ -293,9 +296,7 @@ public sealed class AnalyticsTools
                     return new
                     {
                         student = GetStudentName(row),
-                        earnedPoints,
-                        possiblePoints,
-                        percent = earnedPoints / possiblePoints * 100m,
+                        percent = earnedPoints,
                         evaluationsIncluded = evaluations.Length
                     };
                 })
@@ -374,14 +375,14 @@ public sealed class AnalyticsTools
     public async Task<string> CreateEvaluationAsync(
         [Description("Código del aula propia")] string classroomCode,
         [Description("Título de la evaluación")] string title,
-        [Description("Puntaje máximo, debe ser mayor que cero")] decimal maxPoints,
+        [Description("Peso de la evaluación en el curso, de 0 a 100")] decimal weight,
         [Description("Fecha límite ISO 8601")] DateTime dueDate,
         [Description("Materia o categoría opcional")] string? subject = null)
     {
         EnsureWriteAccess();
         ValidateClassroomCode(classroomCode);
         ValidateText(title, nameof(title), 200);
-        ValidateEvaluationMax(maxPoints);
+        ValidateEvaluationWeight(weight);
         ValidateText(subject, nameof(subject), 200, allowEmpty: true);
         var professorId = GetProfessorId();
 
@@ -412,7 +413,7 @@ public sealed class AnalyticsTools
             new Evaluation
             {
                 title = title,
-                value = (float)maxPoints,
+                value = (float)weight,
                 dueDate = dueDate,
                 subject = subject
             });
@@ -426,7 +427,7 @@ public sealed class AnalyticsTools
         {
             classroomCode,
             title,
-            maxPoints,
+            weight,
             dueDate,
             subject,
             created = true
@@ -434,12 +435,12 @@ public sealed class AnalyticsTools
     }
 
     [McpServerTool(Name = "update_evaluation")]
-    [Description("Actualiza título, valor máximo, fecha y materia de una evaluación propia; no cambia adjuntos ni calificaciones. Requiere permiso write y una instrucción explícita.")]
+    [Description("Actualiza título, valor porcentual, fecha y materia de una evaluación propia; no cambia adjuntos ni calificaciones. Requiere permiso write y una instrucción explícita.")]
     public async Task<string> UpdateEvaluationAsync(
         [Description("Código del aula propia")] string classroomCode,
         [Description("Título actual exacto de la evaluación")] string currentTitle,
         [Description("Nuevo título de la evaluación")] string newTitle,
-        [Description("Nuevo puntaje máximo, debe ser mayor que cero")] decimal maxPoints,
+        [Description("Nuevo peso de la evaluación en el curso, de 0 a 100")] decimal weight,
         [Description("Nueva fecha límite ISO 8601")] DateTime dueDate,
         [Description("Nueva materia o categoría opcional")] string? subject = null)
     {
@@ -447,7 +448,7 @@ public sealed class AnalyticsTools
         ValidateClassroomCode(classroomCode);
         ValidateText(currentTitle, nameof(currentTitle), 200);
         ValidateText(newTitle, nameof(newTitle), 200);
-        ValidateEvaluationMax(maxPoints);
+        ValidateEvaluationWeight(weight);
         ValidateText(subject, nameof(subject), 200, allowEmpty: true);
         var professorId = GetProfessorId();
 
@@ -489,31 +490,20 @@ public sealed class AnalyticsTools
             }
         }
 
-        var updated = await connection.ExecuteAsync(
-            """
-            UPDATE evaluations e
-            INNER JOIN classrooms c ON c.classroom_id = e.classroom_id
-            SET e.title = @newTitle,
-                e.value = @maxPoints,
-                e.dueDate = @dueDate,
-                e.subject = @subject
-            WHERE c.classroomCode = @classroomCode
-              AND c.professor_id = @professorId
-              AND e.title = @currentTitle
-            """,
-            new { classroomCode, professorId, currentTitle, newTitle, maxPoints, dueDate, subject });
-
-        if (updated == 0)
+        await _professors.EditEvaluation(professorId, classroomCode, new Evaluation
         {
-            throw new KeyNotFoundException("The evaluation was not found for the authenticated professor.");
-        }
+            title = newTitle,
+            value = (float)weight,
+            dueDate = dueDate,
+            subject = subject
+        }, currentTitle);
 
         return JsonSerializer.Serialize(new
         {
             classroomCode,
             previousTitle = currentTitle,
             title = newTitle,
-            maxPoints,
+            weight,
             dueDate,
             subject,
             updated = true
@@ -526,7 +516,7 @@ public sealed class AnalyticsTools
         [Description("Código del aula propia")] string classroomCode,
         [Description("Nombre exacto del estudiante")] string studentName,
         [Description("Título exacto de la evaluación")] string evaluationTitle,
-        [Description("Puntaje obtenido, desde cero hasta el máximo inclusive")] decimal score)
+        [Description("Porcentaje obtenido del curso, desde cero hasta el valor de la evaluación inclusive")] decimal score)
     {
         EnsureWriteAccess();
         ValidateClassroomCode(classroomCode);
@@ -534,6 +524,17 @@ public sealed class AnalyticsTools
         ValidateText(evaluationTitle, nameof(evaluationTitle), 200);
         var professorId = GetProfessorId();
         using var connection = CreateConnection();
+        await connection.OpenAsync();
+        using var transaction = await connection.BeginTransactionAsync();
+        var ownedClassroom = await connection.QuerySingleOrDefaultAsync<int?>(
+            """
+            SELECT classroom_id FROM classrooms
+            WHERE classroomCode = @classroomCode AND professor_id = @professorId
+            FOR UPDATE
+            """,
+            new { classroomCode, professorId }, transaction);
+        if (ownedClassroom is null)
+            throw new KeyNotFoundException("The classroom was not found for the authenticated professor.");
 
         var maxPoints = await connection.QuerySingleOrDefaultAsync<decimal?>(
             """
@@ -544,7 +545,7 @@ public sealed class AnalyticsTools
               AND c.professor_id = @professorId
               AND e.title = @evaluationTitle
             """,
-            new { classroomCode, professorId, evaluationTitle });
+            new { classroomCode, professorId, evaluationTitle }, transaction);
 
         if (maxPoints is null)
         {
@@ -564,7 +565,7 @@ public sealed class AnalyticsTools
         };
         var currentGrade = await connection.QueryFirstOrDefaultAsync<GradeWriteState>(
             "CALL GetGradeInfo(@professor_id, @classCode, @student_name, @evaluation_title)",
-            parameters);
+            parameters, transaction);
 
         if (currentGrade is null)
         {
@@ -585,12 +586,13 @@ public sealed class AnalyticsTools
                 evaluation_title = evaluationTitle,
                 grade = (float)score,
                 feedback = currentGrade.Feedback
-            });
+            }, transaction);
 
         if (result is null)
         {
             throw new InvalidOperationException("The grade could not be saved.");
         }
+        await transaction.CommitAsync();
 
         return JsonSerializer.Serialize(new
         {
@@ -598,8 +600,8 @@ public sealed class AnalyticsTools
             student = studentName,
             evaluation = evaluationTitle,
             score,
-            maxPoints = maxPoints.Value,
-            percent = maxPoints.Value == 0m ? 0m : score / maxPoints.Value * 100m,
+            maxPercent = maxPoints.Value,
+            percent = score,
             updated = true
         });
     }
@@ -698,9 +700,9 @@ public sealed class AnalyticsTools
 
     private static decimal RequireMaxPoints(EvaluationInfo evaluation)
     {
-        if (evaluation.MaxPoints is not > 0m)
+        if (evaluation.MaxPoints is null or < 0m or > 100m)
         {
-            throw new InvalidOperationException($"Evaluation '{evaluation.Title}' has no positive maximum value.");
+            throw new InvalidOperationException($"Evaluation '{evaluation.Title}' has no valid percentage value.");
         }
 
         return evaluation.MaxPoints.Value;
@@ -767,12 +769,10 @@ public sealed class AnalyticsTools
         }
     }
 
-    private static void ValidateEvaluationMax(decimal maxPoints)
+    private static void ValidateEvaluationWeight(decimal weight)
     {
-        if (maxPoints <= 0m)
-        {
-            throw new ArgumentOutOfRangeException(nameof(maxPoints), "The maximum score must be positive.");
-        }
+        if (weight is < 0m or > 100m)
+            throw new ArgumentOutOfRangeException(nameof(weight), "The course weight must be between 0 and 100.");
     }
 
     private sealed record EvaluationInfo(string? Title, decimal? MaxPoints, DateTime? DueDate);

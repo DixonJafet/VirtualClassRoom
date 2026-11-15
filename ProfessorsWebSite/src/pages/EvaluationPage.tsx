@@ -12,14 +12,12 @@ import { Grade } from '../interfaces/interfaces.ts';
 import { CSS } from '../utils/Functions.ts';
 import styles from '../components/CSS/TopSection.module.css';
 import tableStyles from '../components/CSS/Table.module.css';
+import { courseTotal, validGrade } from '../utils/percentages';
 
 export function EvaluationPage() {
   const [cardData,setCardData] = useState([{}])
   const [headers,setHeaders] = useState([""])
   const [evaluationMaxima,setEvaluationMaxima] = useState<Record<string, number>>({})
-  const [percentageError,setPercentageError] = useState(false)
-  const [isLoading,setIsLoading] = useState(true)
-  const [displayMode,setDisplayMode] = useState<'pts' | 'percent'>('pts')
   const [float,setFloat] = useState(<></>)
   const {ClassRoomName,classroomCode} = useParams()
 
@@ -43,13 +41,9 @@ export function EvaluationPage() {
         return filtered;
       });
 
-      const evaluationTitles = Object.keys(rows[0] ?? {}).filter(
-        key => key.toLowerCase() !== 'name' && key.toLowerCase() !== 'total'
-      );
       setEvaluationMaxima(maxima ?? {});
-      setPercentageError(maxima === null || evaluationTitles.some(title => maxima[title] === undefined));
+      if (maxima === null) console.error('Could not load evaluation values.');
       updateCardData(rows);
-      setIsLoading(false);
     }
 
     void loadClassroomData();
@@ -60,6 +54,11 @@ export function EvaluationPage() {
 
 
 async function handleNewEvaluation(formData: FormData): Promise<void>{
+  const result = await NEWEvaluationInfo(formData, classroomCode as string);
+  if (result !== 'success') {
+    window.alert('Could not create evaluation. Check that the values total at most 100%.');
+    return;
+  }
   const data: DynamicObject = {};
   formData.forEach((value, key: string) => {data[key] = value as string});
   const newCardData: Record<string, string | number>[] = cardData.map((student: Record<string, string | number>) => {
@@ -68,26 +67,30 @@ async function handleNewEvaluation(formData: FormData): Promise<void>{
     return newInfo;
   });
   const title = data.title as string;
-  const maxPoints = Number(data.value);
-  if (title && Number.isFinite(maxPoints) && maxPoints > 0) {
-    setEvaluationMaxima(previous => ({ ...previous, [title]: maxPoints }));
+  const weight = Number(data.value);
+  if (title && Number.isFinite(weight)) {
+    setEvaluationMaxima(previous => ({ ...previous, [title]: weight }));
   }
   updateCardData(newCardData);
   setFloat(<></>);
-  NEWEvaluationInfo(formData,classroomCode as string)
 }
 
 async function handleEditEvaluation(formData:FormData): Promise<void>{
   const prevName = formData.get('prevName') as string;
+  const result = await EDITEvaluationInfo(formData, classroomCode as string, prevName);
+  if (result !== 'success') {
+    window.alert('Could not update evaluation. Check its value and existing grades.');
+    return;
+  }
   const data: DynamicObject = {};
   formData.forEach((value, key: string) => {if (key!= "prevName"){data[key] = value as string}});
   const title = data.title as string;
-  const maxPoints = Number(data.value);
-  if (title && Number.isFinite(maxPoints) && maxPoints > 0) {
+  const weight = Number(data.value);
+  if (title && Number.isFinite(weight)) {
     setEvaluationMaxima(previous => {
       const updated = { ...previous };
       delete updated[prevName];
-      updated[title] = maxPoints;
+      updated[title] = weight;
       return updated;
     });
   }
@@ -102,32 +105,18 @@ async function handleEditEvaluation(formData:FormData): Promise<void>{
   });
   updateCardData(newCardData);
   setFloat(<></>);
-  EDITEvaluationInfo(formData,classroomCode as string,prevName);
 }
 
 
 function updateCardData(data: Record<string, string | number>[]): void {
-  // Add "total" attribute to each element
   const updatedData: Record<string, string | number>[] = data.map((item: Record<string, string | number>) => {
-    let total = 0;
-    Object.entries(item).forEach(([key, value]) => {
-      // Only sum numeric values and skip "Name" or non-numeric fields
-      if (key.toLowerCase() !== "name" && key.toLowerCase() !== "total" && typeof value === "number") {
-        total += value;
-      } else if (key.toLowerCase() !== "name" && key.toLowerCase() !== "total" &&
-                 typeof value === "string" && !isNaN(Number(value))) {
-        total += Number(value);
-      }
-    });
-    return { ...item, total: Number(total.toFixed(2)) };
+    return { ...item, total: courseTotal(item) };
   });
   updatedData.sort((left, right) =>
     String(left['Name'] ?? '').localeCompare(String(right['Name'] ?? ''), undefined, { sensitivity: 'base' })
   );
 
-  let Headers: string[] = Object.keys(updatedData[0] ?? {});
-  Headers = Headers.map(Header => Header.replaceAll('_', ' '));
-  Headers = Headers.map(Header => Header.charAt(0).toUpperCase() + Header.slice(1));
+  const Headers: string[] = Object.keys(updatedData[0] ?? {});
   setHeaders(Headers);
   setCardData(updatedData);
 }
@@ -163,11 +152,15 @@ async function renderEvaluationForm(name: string | null): Promise<void> {
 }
 
 async function editData(data: DynamicObject ,metadata: DynamicObject,formData: FormData): Promise<void>{
-  const allCardData = cardData
-  const toEdit: DynamicObject = allCardData[Number(metadata['row'])]
-  toEdit[metadata["column"] as string] = data['grade'];
+  const allCardData = cardData.map(row => ({ ...row }));
+  const toEdit: DynamicObject = allCardData[Number(metadata['row'])];
   const name: string = metadata['name'] as string || toEdit['Name'] as string;
-  EDITGradeInfo(formData,classroomCode as string,name,metadata['column'] as string);
+  const result = await EDITGradeInfo(formData,classroomCode as string,name,metadata['column'] as string);
+  if (result !== 'success') {
+    window.alert('Could not save grade. Check the score and try again.');
+    return;
+  }
+  toEdit[metadata["column"] as string] = data['grade'];
   updateCardData(allCardData)
 }
 
@@ -176,11 +169,11 @@ async function handleTableEdit(
   metadata: Record<string, string>,
   formData: FormData
 ): Promise<void> {
-  const maxPoints = evaluationMaxima[metadata.column];
-  if (displayMode === 'percent' && maxPoints) {
-    const points = Number(data.grade) * maxPoints / 100;
-    data.grade = String(points);
-    formData.set('grade', String(points));
+  const maximum = evaluationMaxima[metadata.column];
+  const percentage = Number(data.grade);
+  if (maximum === undefined || !validGrade(percentage, maximum)) {
+    window.alert(maximum === undefined ? 'Evaluation value is unavailable.' : `Enter a percentage between 0 and ${maximum}.`);
+    return;
   }
   await editData(data, metadata, formData);
 }
@@ -203,52 +196,25 @@ function clean_frame(){
   setFloat(<></>)
 }
 
-const displayedData = cardData.map((row: Record<string, string | number>) => {
-  if (displayMode === 'pts') return row;
-
-  const totalPossible = Object.values(evaluationMaxima).reduce((sum, value) => sum + value, 0);
-  const maximaComplete = Object.keys(row).every(key =>
-    key.toLowerCase() === 'name' || key.toLowerCase() === 'total' || evaluationMaxima[key] !== undefined
-  );
-  return Object.fromEntries(Object.entries(row).map(([key, value]) => {
-    if (key.toLowerCase() === 'name') return [key, value];
-    if (key.toLowerCase() === 'total') {
-      return [key, maximaComplete && totalPossible > 0 ? Number(value) / totalPossible * 100 : Number.NaN];
-    }
-    const maxPoints = evaluationMaxima[key];
-    return [key, maxPoints ? Number(value) / maxPoints * 100 : Number.NaN];
-  }));
-});
-
 function formatCell(value: unknown, key: string): string {
+  if (key.toLowerCase() === 'name') return String(value);
   if (typeof value !== 'number' && typeof value !== 'string') return String(value);
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue)) return String(value);
   const formatted = String(Number(numericValue.toFixed(2)));
-  return displayMode === 'percent' && key.toLowerCase() !== 'name'
-    ? `${formatted}%`
-    : key.toLowerCase() === 'total' ? formatted : String(value);
+  return `${formatted}%`;
 }
 
 function getCellClassName(value: unknown, key: string): string | undefined {
   const column = key.toLowerCase();
   if (column !== 'total') return undefined;
 
-  let percentage = Number(value);
-  if (displayMode === 'pts') {
-    const maxPoints = Object.values(evaluationMaxima).reduce((sum, max) => sum + max, 0);
-    if (!maxPoints) return undefined;
-    percentage = percentage / maxPoints * 100;
-  }
+  const percentage = Number(value);
 
   if (Number.isFinite(percentage) && percentage < 68) {
     return tableStyles['low-score'];
   }
 }
-
-const percentageUnavailable = isLoading || Object.keys(cardData[0] ?? {}).some(key =>
-  key.toLowerCase() !== 'name' && key.toLowerCase() !== 'total' && evaluationMaxima[key] === undefined
-);
 
  return (
   <>
@@ -258,20 +224,11 @@ const percentageUnavailable = isLoading || Object.keys(cardData[0] ?? {}).some(k
         <h1><Link to={`/Home/ClassRooms/${classroomCode}/${ClassRoomName}`}>{ClassRoomName}</Link></h1>
       </div>
       <div className={CSS(styles, 'button-group')}>
-        <button
-          type="button"
-          onClick={() => setDisplayMode(mode => mode === 'pts' ? 'percent' : 'pts')}
-          disabled={percentageUnavailable || percentageError}
-          aria-pressed={displayMode === 'percent'}
-          title={percentageUnavailable || percentageError ? 'Percentage view is unavailable because an evaluation maximum could not be loaded.' : undefined}
-        >
-          {displayMode === 'pts' ? 'Show %' : 'Show pts'}
-        </button>
         <button type="button" onClick={newEvaluation}>+ Evaluation</button>
       </div>
     </TopSection>
-    <Table headers = {headers} data={displayedData} editData={handleTableEdit}
-      formatCell={formatCell} getCellClassName={getCellClassName}
+    <Table headers = {headers} data={cardData} editData={handleTableEdit}
+      formatCell={formatCell} formatHeader={header => evaluationMaxima[header] === undefined ? header : `${header}: ${evaluationMaxima[header]}%`} getCellClassName={getCellClassName}
       editableHd editHeaderFunc={renderEvaluationForm} onClickCellFunc={renderGradeForm}>
     </Table>
     {float}

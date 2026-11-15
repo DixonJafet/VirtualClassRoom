@@ -73,7 +73,8 @@ export function InputNumber({label,value,index} : Props): JSX.Element{
             <input type={'number'} id={label+index} name={label} 
             placeholder={`Enter a ${label.replace(/([a-z])([A-Z])/g, '$1 $2')}`} 
             min = {'0'}
-            step = {'1'}
+            step = {label === 'value' || label === 'grade' ? '0.01' : '1'}
+            max = {label === 'value' ? 100 : undefined}
 
             defaultValue = {Number(value)}/>
         </>)}

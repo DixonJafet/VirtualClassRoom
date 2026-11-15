@@ -16,7 +16,8 @@ interface Props{
     editableHd?:boolean,
     onClickCellFunc:(data:Record<string,string>)=>Promise<void>,
     formatCell?: (value: unknown, key: string)=>string,
-    getCellClassName?: (value: unknown, key: string)=>string | undefined
+    formatHeader?: (header: string)=>string,
+    getCellClassName?: (value: unknown, key: string, row: object)=>string | undefined
 }
 function setInput(event: React.MouseEvent<HTMLElement>){
     const span: HTMLSpanElement = event.target as  HTMLSpanElement ;
@@ -43,7 +44,6 @@ function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>, saveFuction
             const table_row: HTMLTableRowElement = table_cell.closest('tr') as HTMLTableRowElement;
             let row: string  = table_row.id.replace('react-table-row-','') as string;
             let column: string = span.dataset.customValue as string;
-            span.textContent = input.value;
             input.disabled = true;
             input.blur();
             span.focus();
@@ -78,6 +78,7 @@ export const Table: React.FC<Props> = ({
     onClickCellFunc,
     editableHd,
     formatCell,
+    formatHeader,
     getCellClassName
 }) =>{
     return (
@@ -89,7 +90,7 @@ export const Table: React.FC<Props> = ({
                 <tr  key = {"rowHead"} className={CSS(styles,"row", "row-head")}>
                     {headers.map((header,index) =><th className={CSS(styles,"item")} key= {`react-table-header-${index}`} 
                         onClick={(event)=>editHeaderFunc(header)}>
-                        {header} 
+                        {formatHeader ? formatHeader(header) : header}
                         {editableHd?<svg xmlns="http://www.w3.org/2000/svg" 
                          viewBox="0 0 24 24" width="24px" height="24px">  
                         <path d="M 19.171875 2 C 18.448125 2 17.724375 2.275625 17.171875 2.828125 L 16 4 L 20 8 L 21.171875 6.828125 C 22.275875 5.724125 22.275875 3.933125 21.171875 2.828125 C 20.619375 2.275625 19.895625 2 19.171875 2 z M 14.5 5.5 L 3 17 L 3 21 L 7 21 L 18.5 9.5 L 14.5 5.5 z"/>
@@ -102,7 +103,7 @@ export const Table: React.FC<Props> = ({
                 { data.map(( ObjectEntry, index)=>(
                     <tr key={`react-table-row-${index}`} id = {`react-table-row-${index}`} className={CSS(styles,"row")} > 
                     {Object.entries(ObjectEntry).map(([key, value])=>(
-                        <td className={[CSS(styles,"item"), getCellClassName?.(value, key)].filter(Boolean).join(' ')} key={`react-table-column-${key}`} onClick={(event)=>{handleTdClick(event,onClickCellFunc)}} >
+                        <td className={[CSS(styles,"item"), getCellClassName?.(value, key, ObjectEntry)].filter(Boolean).join(' ')} key={`react-table-column-${key}`} onClick={(event)=>{handleTdClick(event,onClickCellFunc)}} >
                         <span 
                         onClick={(event)=>{setInput(event)}} data-custom-value = {`${key}`}>{formatCell ? formatCell(value, key) : value as string}
                         </span>

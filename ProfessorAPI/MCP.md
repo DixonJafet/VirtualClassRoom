@@ -7,11 +7,13 @@ The MCP also exposes:
 - Resources: `classrooms://mine` and `classroom://{classroomCode}/evaluations` for discovering owned classrooms and their evaluation values and due dates.
 - Prompt templates: `analyze_classroom`, `rank_students`, `compare_evaluations`, and `plan_next_week`.
 
-For example, “show me the five worst students in this class” maps to `rank_students` with `direction="bottom"` and `limit=5`. Without an evaluation title, it ranks by normalized score across evaluations due today or earlier; provide a specific title to rank within one evaluation.
+For example, “show me the five worst students in this class” maps to `rank_students` with `direction="bottom"` and `limit=5`. Without an evaluation title, it ranks by the sum of course percentages from evaluations due today or earlier; provide a specific title to rank by that evaluation's contribution. `availableWeight` identifies the included portion of the course. Evaluation curves and comparisons also show percentages relative to each evaluation's value.
 
 ## Write access
 
 Write tools can create or rename a classroom, create or update an evaluation, and set a student's grade. They do not delete records, modify student or professor account information, or change evaluation/classroom file attachments. Grade updates preserve the existing feedback reference and reject scores outside the evaluation's range. A grade row must already exist for the student and evaluation; the application normally creates these rows when it creates an evaluation.
+
+Evaluation create and update tools require `weight` (the evaluation's maximum contribution to the course). The combined values of evaluations in a classroom cannot exceed 100%.
 
 OAuth access tokens need the `classroom:read` scope. Tokens granted `classroom:write` in addition to `classroom:read` can also use write tools. The validated token subject (`sub`) must match an existing professor ID. Treat a write-enabled token as sensitive: it can change classroom names, evaluation details, and student scores. Claude should only call a write tool when the user explicitly requests that change.
 
