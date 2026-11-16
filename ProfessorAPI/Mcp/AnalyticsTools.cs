@@ -4,15 +4,17 @@ using System.Security.Claims;
 using System.Text.Json;
 using Dapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.DataProtection;
 using ModelContextProtocol.Server;
 using MySql.Data.MySqlClient;
 using ProfessorAPI.Interface;
 using ProfessorAPI.Models;
+using ProfessorAPI.Connexions;
 
 namespace ProfessorAPI.Mcp;
 
 [McpServerToolType]
-public sealed class AnalyticsTools
+public sealed partial class AnalyticsTools
 {
     private const string DataLimitation =
         "El sistema no guarda un estado revisado/pendiente por calificación; un cero puede ser una nota real o un placeholder.";
@@ -20,14 +22,20 @@ public sealed class AnalyticsTools
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly string _connectionString;
     private readonly InterProfessors _professors;
+    private readonly BlobService _files;
+    private readonly ITimeLimitedDataProtector _deletionProtector;
 
     public AnalyticsTools(
         IHttpContextAccessor httpContextAccessor,
         IConfiguration configuration,
-        InterProfessors professors)
+        InterProfessors professors,
+        BlobService files,
+        IDataProtectionProvider dataProtection)
     {
         _httpContextAccessor = httpContextAccessor;
         _professors = professors;
+        _files = files;
+        _deletionProtector = dataProtection.CreateProtector("Mcp.EvaluationDeletion.v1").ToTimeLimitedDataProtector();
         _connectionString = configuration.GetConnectionString("MySQLConnnection")
             ?? configuration.GetConnectionString("MySQLConnection")
             ?? configuration["MYSQL_ADDON_URI"]
@@ -777,7 +785,11 @@ public sealed class AnalyticsTools
 
     private sealed record EvaluationInfo(string? Title, decimal? MaxPoints, DateTime? DueDate);
 
-    private sealed record GradeWriteState(float? Grade, string? Feedback);
+    private sealed class GradeWriteState
+    {
+        public decimal? Grade { get; set; }
+        public string? Feedback { get; set; }
+    }
 
     private sealed record ClassroomData(
         EvaluationInfo[] Evaluations,

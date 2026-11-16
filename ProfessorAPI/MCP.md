@@ -11,11 +11,15 @@ For example, “show me the five worst students in this class” maps to `rank_s
 
 ## Write access
 
-Write tools can create or rename a classroom, create or update an evaluation, and set a student's grade. They do not delete records, modify student or professor account information, or change evaluation/classroom file attachments. Grade updates preserve the existing feedback reference and reject scores outside the evaluation's range. A grade row must already exist for the student and evaluation; the application normally creates these rows when it creates an evaluation.
+The MCP also offers `get_classroom_summary` (course-percentage totals and remaining evaluation value), `get_classroom_details` (schedules, evaluation details, and attachment names), and `read_classroom_attachment` (classroom about files or evaluation statements/rubrics as base64). Summaries include all evaluations, including future ones; zero grades may be placeholders. Distribution thresholds are course percentages, not percentages normalized to the currently assigned value.
+
+Write tools can create or rename a classroom, replace its complete schedule, create or update an evaluation, replace classroom/evaluation attachments, and update one or multiple student grades. Batch grade updates are transactional: if one fails, none are saved. Grade updates preserve feedback and require existing grade rows; scores must be within the evaluation's value. Attachment reads and replacements accept PDF or TXT files up to 1 MiB. The MCP does not access student feedback attachments, modify student or professor account information, or delete classrooms. Replaced and deleted evaluation files remain in storage to avoid deleting files that may be shared or losing data if a database operation fails.
+
+`delete_evaluation` permanently deletes the evaluation and its associated grades only after an interactive MCP elicitation confirms the exact classroom, evaluation, value, and grade count. It requires a client supporting MCP multi-round-trip requests and interactive elicitation. If the client cannot complete the confirmation, or the user declines or cancels, nothing is deleted. Confirmations expire after five minutes, and the tool rejects deletion if those evaluation details change before the deletion is committed.
 
 Evaluation create and update tools require `weight` (the evaluation's maximum contribution to the course). The combined values of evaluations in a classroom cannot exceed 100%.
 
-OAuth access tokens need the `classroom:read` scope. Tokens granted `classroom:write` in addition to `classroom:read` can also use write tools. The validated token subject (`sub`) must match an existing professor ID. Treat a write-enabled token as sensitive: it can change classroom names, evaluation details, and student scores. Claude should only call a write tool when the user explicitly requests that change.
+OAuth access tokens need the `classroom:read` scope. Tokens granted `classroom:write` in addition to `classroom:read` can also use write tools. The validated token subject (`sub`) must match an existing professor ID. Treat a write-enabled token as sensitive: it can change classroom schedules, attachments, evaluations, and student scores. Claude should only call a write tool when the user explicitly requests that change.
 
 ## External OpenIddict OAuth service
 
