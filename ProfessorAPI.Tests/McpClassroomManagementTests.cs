@@ -2,11 +2,11 @@ using System.Security.Claims;
 using ProfessorAPI.Connexions;
 using ProfessorAPI.Interface;
 using ProfessorAPI.Mcp;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Moq;
+using ModelContextProtocol;
 using Xunit;
 
 namespace ProfessorAPI.Tests;
@@ -30,9 +30,9 @@ public class McpClassroomManagementTests
     {
         var tools = CreateTools(write: true);
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            tools.SetClassroomScheduleAsync("CLASS", [new("Monday", "12:00", "11:00")]));
+            tools.SetClassroomScheduleAsync("CLASS", [new("Monday", "12:00", "11:00")], true));
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            tools.SetClassroomScheduleAsync("CLASS", [new("Invalid", "09:00", "10:00")]));
+            tools.SetClassroomScheduleAsync("CLASS", [new("Invalid", "09:00", "10:00")], true));
     }
 
     [Fact]
@@ -40,9 +40,9 @@ public class McpClassroomManagementTests
     {
         var tools = CreateTools(write: true);
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            tools.SetStudentGradesAsync("CLASS", "Quiz", []));
+            tools.SetStudentGradesAsync("CLASS", "Quiz", [], true));
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            tools.SetStudentGradesAsync("CLASS", "Quiz", [new("Alice", 1), new("alice", 2)]));
+            tools.SetStudentGradesAsync("CLASS", "Quiz", [new("Alice", 1), new("alice", 2)], true));
     }
 
     [Fact]
@@ -50,11 +50,24 @@ public class McpClassroomManagementTests
     {
         var tools = CreateTools(write: true);
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            tools.ReplaceClassroomAttachmentAsync("CLASS", "about", "../file.txt", "aGk="));
+            tools.ReplaceClassroomAttachmentAsync("CLASS", "about", "../file.txt", "aGk=", confirmed: true));
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            tools.ReplaceClassroomAttachmentAsync("CLASS", "feedback", "file.txt", "aGk="));
+            tools.ReplaceClassroomAttachmentAsync("CLASS", "feedback", "file.txt", "aGk=", confirmed: true));
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            tools.ReplaceClassroomAttachmentAsync("CLASS", "about", "file.exe", "aGk="));
+            tools.ReplaceClassroomAttachmentAsync("CLASS", "about", "file.exe", "aGk=", confirmed: true));
+    }
+
+    [Fact]
+    public async Task EditsAndDeletion_RequireConfirmation()
+    {
+        var tools = CreateTools(write: true);
+        await Assert.ThrowsAsync<McpException>(() => tools.UpdateClassroomAsync("CLASS", "New"));
+        await Assert.ThrowsAsync<McpException>(() => tools.UpdateEvaluationAsync("CLASS", "Old", "New", 10, DateTime.Today));
+        await Assert.ThrowsAsync<McpException>(() => tools.SetStudentGradeAsync("CLASS", "Alice", "Quiz", 5));
+        await Assert.ThrowsAsync<McpException>(() => tools.SetClassroomScheduleAsync("CLASS", []));
+        await Assert.ThrowsAsync<McpException>(() => tools.SetStudentGradesAsync("CLASS", "Quiz", [new("Alice", 5)]));
+        await Assert.ThrowsAsync<McpException>(() => tools.ReplaceClassroomAttachmentAsync("CLASS", "about", "file.txt", "aGk="));
+        await Assert.ThrowsAsync<McpException>(() => tools.DeleteEvaluationAsync("CLASS", "Quiz"));
     }
 
     private static AnalyticsTools CreateTools(bool write)
@@ -80,7 +93,6 @@ public class McpClassroomManagementTests
             new HttpContextAccessor { HttpContext = context },
             configuration,
             Mock.Of<InterProfessors>(),
-            new BlobService(configuration, environment),
-            new EphemeralDataProtectionProvider());
+            new BlobService(configuration, environment));
     }
 }

@@ -4,7 +4,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Dapper;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.DataProtection;
+using ModelContextProtocol;
 using ModelContextProtocol.Server;
 using MySql.Data.MySqlClient;
 using ProfessorAPI.Interface;
@@ -23,26 +23,23 @@ public sealed partial class AnalyticsTools
     private readonly string _connectionString;
     private readonly InterProfessors _professors;
     private readonly BlobService _files;
-    private readonly ITimeLimitedDataProtector _deletionProtector;
 
     public AnalyticsTools(
         IHttpContextAccessor httpContextAccessor,
         IConfiguration configuration,
         InterProfessors professors,
-        BlobService files,
-        IDataProtectionProvider dataProtection)
+        BlobService files)
     {
         _httpContextAccessor = httpContextAccessor;
         _professors = professors;
         _files = files;
-        _deletionProtector = dataProtection.CreateProtector("Mcp.EvaluationDeletion.v1").ToTimeLimitedDataProtector();
         _connectionString = configuration.GetConnectionString("MySQLConnnection")
             ?? configuration.GetConnectionString("MySQLConnection")
             ?? configuration["MYSQL_ADDON_URI"]
             ?? throw new InvalidOperationException("The MySQL connection string is not configured.");
     }
 
-    [McpServerTool(Name = "list_classrooms")]
+    [McpServerTool(Name = "list_classrooms", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Lista las aulas del profesor autenticado.")]
     public async Task<string> ListClassroomsAsync()
     {
@@ -59,7 +56,7 @@ public sealed partial class AnalyticsTools
         return JsonSerializer.Serialize(classrooms);
     }
 
-    [McpServerTool(Name = "get_evaluation_curve")]
+    [McpServerTool(Name = "get_evaluation_curve", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Devuelve la curva de una evaluación: notas, porcentajes del máximo, distancia al puntaje más alto y distribución.")]
     public async Task<string> GetEvaluationCurveAsync(
         [Description("Código del aula")] string classroomCode,
@@ -117,7 +114,7 @@ public sealed partial class AnalyticsTools
         return JsonSerializer.Serialize(result);
     }
 
-    [McpServerTool(Name = "get_top_students")]
+    [McpServerTool(Name = "get_top_students", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Atajo para obtener los mejores estudiantes por porcentaje normalizado.")]
     public async Task<string> GetTopStudentsAsync(
         [Description("Código del aula")] string classroomCode,
@@ -126,7 +123,7 @@ public sealed partial class AnalyticsTools
         return await RankStudentsAsync(classroomCode, "top", limit);
     }
 
-    [McpServerTool(Name = "rank_students")]
+    [McpServerTool(Name = "rank_students", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Obtiene los mejores o peores estudiantes por contribución al curso de evaluaciones vencidas o una evaluación concreta.")]
     public async Task<string> RankStudentsAsync(
         [Description("Código del aula")] string classroomCode,
@@ -189,7 +186,7 @@ public sealed partial class AnalyticsTools
         });
     }
 
-    [McpServerTool(Name = "compare_evaluations")]
+    [McpServerTool(Name = "compare_evaluations", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Compara dos evaluaciones por estudiante usando porcentajes respecto al valor máximo de cada una.")]
     public async Task<string> CompareEvaluationsAsync(
         [Description("Código del aula")] string classroomCode,
@@ -239,7 +236,7 @@ public sealed partial class AnalyticsTools
         });
     }
 
-    [McpServerTool(Name = "get_upcoming_evaluations")]
+    [McpServerTool(Name = "get_upcoming_evaluations", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Lista evaluaciones que vencen en los próximos días, para un aula o todas las aulas propias.")]
     public async Task<string> GetUpcomingEvaluationsAsync(
         [Description("Código del aula; omítelo para consultar todas tus aulas")] string? classroomCode = null,
@@ -272,7 +269,7 @@ public sealed partial class AnalyticsTools
         });
     }
 
-    [McpServerTool(Name = "find_students_by_grade_range")]
+    [McpServerTool(Name = "find_students_by_grade_range", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Busca estudiantes por contribución porcentual al curso de una evaluación o de evaluaciones vencidas.")]
     public async Task<string> FindStudentsByGradeRangeAsync(
         [Description("Código del aula")] string classroomCode,
@@ -325,7 +322,7 @@ public sealed partial class AnalyticsTools
         });
     }
 
-    [McpServerTool(Name = "create_classroom")]
+    [McpServerTool(Name = "create_classroom", ReadOnly = false, Destructive = false, OpenWorld = false)]
     [Description("Crea un aula para el profesor autenticado. Requiere un token MCP con permiso write y una instrucción explícita del usuario.")]
     public async Task<string> CreateClassroomAsync(
         [Description("Nombre del aula")] string courseName)
@@ -350,13 +347,15 @@ public sealed partial class AnalyticsTools
         });
     }
 
-    [McpServerTool(Name = "update_classroom")]
-    [Description("Cambia el nombre de un aula propia sin alterar horarios, archivos ni otros datos. Requiere permiso write y una instrucción explícita.")]
+    [McpServerTool(Name = "update_classroom", ReadOnly = false, Destructive = true, OpenWorld = false)]
+    [Description("Cambia el nombre de un aula propia. Antes de llamar, pide al usuario confirmación explícita de este cambio y solo entonces pasa confirmed=true. Requiere permiso write.")]
     public async Task<string> UpdateClassroomAsync(
         [Description("Código del aula propia")] string classroomCode,
-        [Description("Nuevo nombre del aula")] string courseName)
+        [Description("Nuevo nombre del aula")] string courseName,
+        [Description("True solo después de que el usuario confirme este cambio")] bool confirmed = false)
     {
         EnsureWriteAccess();
+        EnsureConfirmed(confirmed);
         ValidateText(courseName, nameof(courseName), 200);
         var professorId = GetProfessorId();
         ValidateClassroomCode(classroomCode);
@@ -378,7 +377,7 @@ public sealed partial class AnalyticsTools
         return JsonSerializer.Serialize(new { classroomCode, courseName, updated = true });
     }
 
-    [McpServerTool(Name = "create_evaluation")]
+    [McpServerTool(Name = "create_evaluation", ReadOnly = false, Destructive = false, OpenWorld = false)]
     [Description("Crea una evaluación propia. No adjunta archivos. Requiere permiso write y una instrucción explícita del usuario.")]
     public async Task<string> CreateEvaluationAsync(
         [Description("Código del aula propia")] string classroomCode,
@@ -442,17 +441,19 @@ public sealed partial class AnalyticsTools
         });
     }
 
-    [McpServerTool(Name = "update_evaluation")]
-    [Description("Actualiza título, valor porcentual, fecha y materia de una evaluación propia; no cambia adjuntos ni calificaciones. Requiere permiso write y una instrucción explícita.")]
+    [McpServerTool(Name = "update_evaluation", ReadOnly = false, Destructive = true, OpenWorld = false)]
+    [Description("Actualiza una evaluación propia. Antes de llamar, pide al usuario confirmación explícita de los cambios y solo entonces pasa confirmed=true. Requiere permiso write.")]
     public async Task<string> UpdateEvaluationAsync(
         [Description("Código del aula propia")] string classroomCode,
         [Description("Título actual exacto de la evaluación")] string currentTitle,
         [Description("Nuevo título de la evaluación")] string newTitle,
         [Description("Nuevo peso de la evaluación en el curso, de 0 a 100")] decimal weight,
         [Description("Nueva fecha límite ISO 8601")] DateTime dueDate,
-        [Description("Nueva materia o categoría opcional")] string? subject = null)
+        [Description("Nueva materia o categoría opcional")] string? subject = null,
+        [Description("True solo después de que el usuario confirme estos cambios")] bool confirmed = false)
     {
         EnsureWriteAccess();
+        EnsureConfirmed(confirmed);
         ValidateClassroomCode(classroomCode);
         ValidateText(currentTitle, nameof(currentTitle), 200);
         ValidateText(newTitle, nameof(newTitle), 200);
@@ -518,15 +519,17 @@ public sealed partial class AnalyticsTools
         });
     }
 
-    [McpServerTool(Name = "set_student_grade")]
-    [Description("Asigna o actualiza la calificación de un estudiante inscrito en una evaluación. Conserva el feedback y no modifica datos del estudiante. Requiere permiso write e instrucción explícita.")]
+    [McpServerTool(Name = "set_student_grade", ReadOnly = false, Destructive = true, OpenWorld = false)]
+    [Description("Actualiza una calificación y conserva el feedback. Antes de llamar, pide al usuario confirmación explícita de la nota y solo entonces pasa confirmed=true. Requiere permiso write.")]
     public async Task<string> SetStudentGradeAsync(
         [Description("Código del aula propia")] string classroomCode,
         [Description("Nombre exacto del estudiante")] string studentName,
         [Description("Título exacto de la evaluación")] string evaluationTitle,
-        [Description("Porcentaje obtenido del curso, desde cero hasta el valor de la evaluación inclusive")] decimal score)
+        [Description("Porcentaje obtenido del curso, desde cero hasta el valor de la evaluación inclusive")] decimal score,
+        [Description("True solo después de que el usuario confirme este cambio")] bool confirmed = false)
     {
         EnsureWriteAccess();
+        EnsureConfirmed(confirmed);
         ValidateClassroomCode(classroomCode);
         ValidateText(studentName, nameof(studentName), 200);
         ValidateText(evaluationTitle, nameof(evaluationTitle), 200);
@@ -629,6 +632,12 @@ public sealed partial class AnalyticsTools
         {
             throw new UnauthorizedAccessException("This MCP operation requires a write-enabled access token.");
         }
+    }
+
+    private static void EnsureConfirmed(bool confirmed)
+    {
+        if (!confirmed)
+            throw new McpException("Ask the user to confirm this specific change before calling again with confirmed=true.");
     }
 
     private async Task EnsureClassroomOwnedAsync(string classroomCode, string professorId)

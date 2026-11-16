@@ -2,10 +2,8 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
 using Dapper;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using ModelContextProtocol;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace ProfessorAPI.Mcp;
@@ -16,7 +14,7 @@ public sealed partial class AnalyticsTools
     private static readonly string[] Days =
         ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-    [McpServerTool(Name = "get_classroom_summary")]
+    [McpServerTool(Name = "get_classroom_summary", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Resume el aula propia: valores de evaluaciones, porcentaje restante y distribución de notas del curso.")]
     public async Task<string> GetClassroomSummaryAsync(string classroomCode)
     {
@@ -60,7 +58,7 @@ public sealed partial class AnalyticsTools
         });
     }
 
-    [McpServerTool(Name = "get_classroom_details")]
+    [McpServerTool(Name = "get_classroom_details", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Consulta el nombre, horarios y evaluaciones de un aula propia, con nombres de sus adjuntos.")]
     public async Task<string> GetClassroomDetailsAsync(string classroomCode)
     {
@@ -92,13 +90,15 @@ public sealed partial class AnalyticsTools
         });
     }
 
-    [McpServerTool(Name = "set_classroom_schedule")]
-    [Description("Reemplaza todos los horarios de un aula propia. Requiere permiso write e instrucción explícita.")]
+    [McpServerTool(Name = "set_classroom_schedule", ReadOnly = false, Destructive = true, OpenWorld = false)]
+    [Description("Reemplaza todos los horarios de un aula propia. Antes de llamar, pide confirmación explícita de los horarios al usuario y solo entonces pasa confirmed=true. Requiere permiso write.")]
     public async Task<string> SetClassroomScheduleAsync(
         string classroomCode,
-        [Description("Lista completa de horarios; una lista vacía elimina los horarios existentes")] ClassroomScheduleInput[] schedules)
+        [Description("Lista completa de horarios; una lista vacía elimina los horarios existentes")] ClassroomScheduleInput[] schedules,
+        [Description("True solo después de que el usuario confirme este cambio")] bool confirmed = false)
     {
         EnsureWriteAccess();
+        EnsureConfirmed(confirmed);
         ValidateClassroomCode(classroomCode);
         if (schedules is null || schedules.Length > 100)
             throw new ArgumentException("Provide at most 100 schedule entries.", nameof(schedules));
@@ -126,13 +126,15 @@ public sealed partial class AnalyticsTools
         return JsonSerializer.Serialize(new { classroomCode, schedules, updated = true });
     }
 
-    [McpServerTool(Name = "set_student_grades")]
-    [Description("Actualiza un lote de notas de una evaluación propia de forma atómica, conservando el feedback. Requiere permiso write e instrucción explícita.")]
+    [McpServerTool(Name = "set_student_grades", ReadOnly = false, Destructive = true, OpenWorld = false)]
+    [Description("Actualiza un lote de notas de forma atómica. Antes de llamar, pide al usuario confirmación explícita de los cambios y solo entonces pasa confirmed=true. Requiere permiso write.")]
     public async Task<string> SetStudentGradesAsync(
         string classroomCode, string evaluationTitle,
-        [Description("Entre 1 y 100 estudiantes con sus porcentajes obtenidos")] StudentGradeInput[] grades)
+        [Description("Entre 1 y 100 estudiantes con sus porcentajes obtenidos")] StudentGradeInput[] grades,
+        [Description("True solo después de que el usuario confirme estos cambios")] bool confirmed = false)
     {
         EnsureWriteAccess();
+        EnsureConfirmed(confirmed);
         ValidateClassroomCode(classroomCode);
         ValidateText(evaluationTitle, nameof(evaluationTitle), 200);
         if (grades is null || grades.Length is < 1 or > 100 ||
@@ -166,13 +168,14 @@ public sealed partial class AnalyticsTools
         return JsonSerializer.Serialize(new { classroomCode, evaluationTitle, updated = grades.Length });
     }
 
-    [McpServerTool(Name = "delete_evaluation")]
-    [Description("Elimina una evaluación propia y todas sus notas solamente tras confirmación interactiva del usuario. Requiere permiso write.")]
+    [McpServerTool(Name = "delete_evaluation", ReadOnly = false, Destructive = true, OpenWorld = false)]
+    [Description("Elimina una evaluación propia y todas sus notas. Antes de llamar, pide al usuario confirmar explícitamente la eliminación de la evaluación y sus notas; solo entonces pasa confirmed=true. Requiere permiso write.")]
     public async Task<string> DeleteEvaluationAsync(
-        RequestContext<CallToolRequestParams> request,
-        string classroomCode, string evaluationTitle, CancellationToken cancellationToken)
+        string classroomCode, string evaluationTitle,
+        [Description("True solo después de que el usuario confirme esta eliminación y la pérdida de sus notas")] bool confirmed = false)
     {
         EnsureWriteAccess();
+        EnsureConfirmed(confirmed);
         ValidateClassroomCode(classroomCode);
         ValidateText(evaluationTitle, nameof(evaluationTitle), 200);
         var professorId = GetProfessorId();
@@ -185,47 +188,6 @@ public sealed partial class AnalyticsTools
             WHERE c.professor_id=@professorId AND c.classroomCode=@classroomCode AND e.title=@evaluationTitle
             """, new { professorId, classroomCode, evaluationTitle })
             ?? throw new KeyNotFoundException("The evaluation was not found.");
-        if (!request.Server.IsMrtrSupported)
-            throw new McpException("This MCP client cannot request confirmation. Use a client supporting MCP multi-round-trip requests.");
-
-        var state = request.Params?.RequestState;
-        var responses = request.Params?.InputResponses;
-        if (state is null)
-        {
-            var protectedState = _deletionProtector.Protect(
-                JsonSerializer.Serialize(new DeletionState(professorId, classroomCode, preview)),
-                TimeSpan.FromMinutes(5));
-            throw new InputRequiredException(
-                inputRequests: new Dictionary<string, InputRequest>
-                {
-                    ["confirmation"] = InputRequest.ForElicitation(new ElicitRequestParams
-                    {
-                        Message = $"Delete evaluation '{preview.Title}' from classroom '{classroomCode}'? This permanently deletes {preview.GradeCount} associated grades. Its value is {preview.Value}% of the course.",
-                        RequestedSchema = new()
-                        {
-                            Properties = new Dictionary<string, ElicitRequestParams.PrimitiveSchemaDefinition>
-                            {
-                                ["confirm"] = new ElicitRequestParams.BooleanSchema { Description = "Confirm permanent deletion" }
-                            },
-                            Required = ["confirm"]
-                        }
-                    })
-                }, requestState: protectedState);
-        }
-
-        var confirmedState = JsonSerializer.Deserialize<DeletionState>(_deletionProtector.Unprotect(state))
-            ?? throw new InvalidOperationException("Invalid deletion confirmation.");
-        if (confirmedState.ProfessorId != professorId || confirmedState.ClassroomCode != classroomCode ||
-            confirmedState.Preview.Id != preview.Id || confirmedState.Preview.Title != preview.Title ||
-            confirmedState.Preview.Value != preview.Value || confirmedState.Preview.GradeCount != preview.GradeCount)
-            throw new McpException("The evaluation changed after confirmation; request deletion again.");
-        if (responses is null || !responses.TryGetValue("confirmation", out var response))
-            throw new McpException("Deletion requires a confirmation response.");
-        var confirmation = response.Deserialize(InputResponse.ElicitResultJsonTypeInfo);
-        if (confirmation?.IsAccepted != true || confirmation.Content is null ||
-            !confirmation.Content.TryGetValue("confirm", out var confirm) || confirm.ValueKind != JsonValueKind.True)
-            throw new McpException("Deletion was not confirmed; nothing was deleted.");
-
         await connection.OpenAsync();
         using var transaction = await connection.BeginTransactionAsync();
         var classroomId = await LockOwnedClassroomAsync(connection, transaction, classroomCode, professorId);
@@ -243,7 +205,7 @@ public sealed partial class AnalyticsTools
         return JsonSerializer.Serialize(new { classroomCode, evaluationTitle, deletedGrades = preview.GradeCount, deleted = true });
     }
 
-    [McpServerTool(Name = "read_classroom_attachment")]
+    [McpServerTool(Name = "read_classroom_attachment", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description("Lee el archivo about del aula o statement/rubric de una evaluación propia, en base64, máximo 1 MiB. No permite acceder a feedback de estudiantes.")]
     public async Task<string> ReadClassroomAttachmentAsync(string classroomCode, string kind, string? evaluationTitle = null)
     {
@@ -261,12 +223,14 @@ public sealed partial class AnalyticsTools
         return JsonSerializer.Serialize(new { classroomCode, kind, evaluationTitle, fileName = AttachmentName(reference), contentBase64 = Convert.ToBase64String(content.ToArray()) });
     }
 
-    [McpServerTool(Name = "replace_classroom_attachment")]
-    [Description("Reemplaza el archivo about, statement o rubric de un aula propia. Acepta PDF o TXT en base64 hasta 1 MiB. Requiere permiso write e instrucción explícita.")]
+    [McpServerTool(Name = "replace_classroom_attachment", ReadOnly = false, Destructive = true, OpenWorld = false)]
+    [Description("Reemplaza un adjunto de un aula propia. Antes de llamar, pide al usuario confirmación explícita del reemplazo y solo entonces pasa confirmed=true. Acepta PDF o TXT en base64 hasta 1 MiB. Requiere permiso write.")]
     public async Task<string> ReplaceClassroomAttachmentAsync(
-        string classroomCode, string kind, string fileName, string contentBase64, string? evaluationTitle = null)
+        string classroomCode, string kind, string fileName, string contentBase64, string? evaluationTitle = null,
+        [Description("True solo después de que el usuario confirme este reemplazo")] bool confirmed = false)
     {
         EnsureWriteAccess();
+        EnsureConfirmed(confirmed);
         ValidateClassroomCode(classroomCode);
         ValidateAttachmentKind(kind, evaluationTitle);
         ValidateStoredFileName(fileName);
@@ -342,9 +306,10 @@ public sealed partial class AnalyticsTools
     private static string? AttachmentName(string? name)
     {
         if (string.IsNullOrEmpty(name)) return null;
-        ValidateStoredFileName(name);
-        var separator = name.IndexOf("00_PAPI_", StringComparison.Ordinal);
-        return separator >= 0 ? name[(separator + "00_PAPI_".Length)..] : name;
+        var slash = Math.Max(name.LastIndexOf('/'), name.LastIndexOf('\\'));
+        var fileName = name[(slash + 1)..];
+        var separator = fileName.IndexOf("00_PAPI_", StringComparison.Ordinal);
+        return separator >= 0 ? fileName[(separator + "00_PAPI_".Length)..] : fileName;
     }
 
     private static async Task<int> LockOwnedClassroomAsync(
@@ -359,7 +324,6 @@ public sealed partial class AnalyticsTools
 
     public sealed record ClassroomScheduleInput(string Day, string From, string To);
     public sealed record StudentGradeInput(string StudentName, decimal Score);
-    private sealed record DeletionState(string ProfessorId, string ClassroomCode, DeletionPreview Preview);
     private sealed class EvaluationAttachmentState
     {
         public int Id { get; set; }
