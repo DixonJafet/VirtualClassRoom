@@ -48,6 +48,16 @@ This platform allows professors to manage their classes, assignments, and resour
 
 ---
 
+## 🤖 MCP Integration
+The remote **Model Context Protocol (MCP)** server connects AI assistants to a professor's classrooms.
+
+- 📊 Analyze grades, rankings, evaluation curves, and course progress
+- 🧾 Manage classrooms, schedules, evaluations, grades, and attachments
+- 🔐 Access is scoped to the authenticated professor; clients ask for confirmation before edits and deletions
+- 🛠️ Built with **C# / ASP.NET Core**, the **MCP SDK**, **MySQL**, and **OAuth 2.0 / OpenIddict**
+
+---
+
 ## 🚀 Quick Start
 **Recomendation:**
 I highly recommend use the mock User
