@@ -510,6 +510,7 @@ App_Data/
 !.env.*.example
 ProfessorOAuth/appsettings.Development.json
 ProfessorOAuth/appsettings.Local.json
+ProfessorOAuth/AZURE_KEY_VAULT_DEPLOYMENT_HANDOFF.txt
 ProfessorAPI/MCP.md
 
 # Private keys and certificate bundles
