@@ -510,6 +510,7 @@ App_Data/
 !.env.*.example
 ProfessorOAuth/appsettings.Development.json
 ProfessorOAuth/appsettings.Local.json
+ProfessorAPI/MCP.md
 
 # Private keys and certificate bundles
 *.key
