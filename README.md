@@ -55,6 +55,7 @@ The remote **Model Context Protocol (MCP)** server connects AI assistants to a p
 - 🧾 Manage classrooms, schedules, evaluations, grades, and attachments
 - 🔐 Access is scoped to the authenticated professor; clients ask for confirmation before edits and deletions
 - 🛠️ Built with **C# / ASP.NET Core**, the **MCP SDK**, **MySQL**, and **OAuth 2.0 / OpenIddict**
+- 🔗 [Connect to the remote MCP server](https://classroomapi.runasp.net/mcp)
 
 ---
 

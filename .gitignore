@@ -69,6 +69,7 @@ dlldata.c
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
 ProfessorOAuth.Tests/
+ProfessorAPI.Tests/
 # .NET Core
 project.lock.json
 project.fragment.lock.json
